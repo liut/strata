@@ -1,0 +1,40 @@
+# Binaries
+/bin/
+/strata
+/strata-grpc
+
+# Session data
+/tmp/strata/
+/tmp/strata-sessions/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+/dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config secrets (local override)
+configs/config.local.yaml
+.env
+.env.*
+
+# Go
+vendor/
+go.sum
+
+# Node
+node_modules/
+*.log
+*.local.*

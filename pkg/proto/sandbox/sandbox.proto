@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package sandbox;
+
+option go_package = "github.com/liut/strata/proto/sandbox";
+
+// SandboxService 提供 gRPC 沙盒操作接口
+service SandboxService {
+  // CreateSession 创建或复用一个隔离 Shell 会话
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+
+  // CloseSession 主动关闭并清理一个会话
+  rpc CloseSession(CloseSessionRequest) returns (CloseSessionResponse);
+
+  // Exec 在指定 session 中执行一次性命令（非交互式）
+  rpc Exec(ExecRequest) returns (ExecResponse);
+
+  // Shell 双向流：交互式 Shell（类 SSH 体验）
+  rpc Shell(stream ShellInput) returns (stream ShellOutput);
+
+  // Stats 查询服务运行状态
+  rpc Stats(StatsRequest) returns (StatsResponse);
+}
+
+// ─────────────────────────────────────────
+// Session 管理
+// ─────────────────────────────────────────
+
+message CreateSessionRequest {
+  string user_id    = 1;
+  string session_id = 2;
+}
+
+message CreateSessionResponse {
+  string user_id    = 1;
+  string session_id = 2;
+  string created_at = 3; // RFC3339
+}
+
+message CloseSessionRequest {
+  string user_id    = 1;
+  string session_id = 2;
+}
+
+message CloseSessionResponse {
+  bool   success = 1;
+  string message = 2;
+}
+
+// ─────────────────────────────────────────
+// 命令执行
+// ─────────────────────────────────────────
+
+message ExecRequest {
+  string user_id    = 1;
+  string session_id = 2;
+  string command    = 3;
+  int32  timeout_ms = 4; // 0 表示使用服务默认值（30s）
+}
+
+message ExecResponse {
+  string output    = 1;
+  string elapsed   = 2;
+  bool   truncated = 3;
+  string error     = 4; // 执行本身报错
+}
+
+// ─────────────────────────────────────────
+// 交互式 Shell（双向流）
+// ─────────────────────────────────────────
+
+message ShellInput {
+  string user_id    = 1;
+  string session_id = 2;
+
+  oneof payload {
+    bytes  stdin_data = 3; // 键盘输入 / 命令文本
+    Resize resize     = 4; // 终端尺寸变更
+  }
+}
+
+message ShellOutput {
+  bytes  data   = 1; // stdout/stderr 混合输出
+  bool   closed = 2; // session 已关闭
+  string error  = 3;
+}
+
+message Resize {
+  uint32 rows = 1;
+  uint32 cols = 2;
+}
+
+// ─────────────────────────────────────────
+// 状态查询
+// ─────────────────────────────────────────
+
+message StatsRequest {}
+
+message StatsResponse {
+  int32 active_sessions = 1;
+  int32 max_sessions    = 2;
+}
