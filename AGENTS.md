@@ -20,10 +20,8 @@ strata/
 │   ├── run.go              # Unified server (HTTP + gRPC + MCP)
 │   ├── middleware.go       # HTTP middleware
 │   └── root.go             # Root command
-├── configs/
-│   └── config.yaml
 ├── pkg/                    # Core packages
-│   ├── config/             # Configuration loading
+│   ├── config/             # Configuration (envconfig)
 │   ├── proto/sandbox/      # gRPC definitions
 │   │   └── sandbox.proto
 │   ├── sandbox/            # Isolation engine
@@ -84,38 +82,19 @@ go run .
 
 ## Configuration
 
-Edit `configs/config.yaml`:
+Configuration is provided via environment variables:
 
-```yaml
-server:
-  addr: ":8080"
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS listen address |
+| `STRATA_SANDBOX_BASE_ROOTFS` | - | Base read-only rootfs (optional) |
+| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session working directory |
+| `STRATA_SANDBOX_SESSION_TTL` | `30m` | Inactive session timeout |
+| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max concurrent sessions |
+| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay driver: fuse/kernel/none |
+| `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
 
-sandbox:
-  # Base root filesystem (optional)
-  # Leave empty to use host directories as lower layers
-  base_rootfs: ""
-
-  # Session working directory
-  session_root: "/tmp/strata/sessions"
-
-  # Auto-cleanup inactive sessions
-  session_ttl: "30m"
-
-  # Max concurrent sessions
-  max_sessions: 100
-
-  # Network isolation per session
-  isolate_network: false
-
-  # Overlay driver: fuse | kernel | none
-  # fuse = fuse-overlayfs (recommended, no root)
-  # kernel = native overlayfs in user namespace
-  # none = pure bwrap with tmpfs (no persistence)
-  overlay_driver: "fuse"
-
-grpc:
-  addr: ":9090"
-```
+View all options: `./strata run --help`
 
 ---
 
@@ -123,10 +102,10 @@ grpc:
 
 ```bash
 # HTTP + WebSocket
-./bin/strata
+./strata
 
-# Or with custom config
-./bin/strata -config /path/to/config.yaml
+# Or with custom environment variables
+STRATA_SERVER_ADDR=:9000 ./strata
 ```
 
 Service will listen on:
@@ -299,10 +278,9 @@ mux.HandleFunc("GET /health", h.HandleHealth)
 
 ### Changing Overlay Driver
 
-In `configs/config.yaml`:
-```yaml
-sandbox:
-  overlay_driver: "kernel"  # Use native overlayfs in user namespace
+Via environment variable:
+```bash
+STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./strata
 ```
 
 Or in code (`pkg/config/config.go`):
