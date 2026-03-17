@@ -17,8 +17,8 @@ Strata is a **lightweight session sandbox service** that provides isolated shell
 ```
 strata/
 ├── cmd/                    # Entry points
-│   ├── grpc.go             # gRPC server
-│   ├── web.go              # HTTP/WS server
+│   ├── run.go              # Unified server (HTTP + gRPC + MCP)
+│   ├── middleware.go       # HTTP middleware
 │   └── root.go             # Root command
 ├── configs/
 │   └── config.yaml
@@ -30,10 +30,13 @@ strata/
 │   │   ├── manager.go      # Session lifecycle
 │   │   ├── overlay.go      # fuse-overlayfs mount
 │   │   └── session.go      # bwrap + PTY
-│   └── webapi/             # HTTP handlers + WebSocket
+│   ├── webapi/             # HTTP handlers + WebSocket
+│   ├── mcp/                # MCP tool handlers
+│   └── rpc/                # gRPC service implementation
 └── scripts/
     ├── check-env.sh        # Dependency checker
-    └── test-api.sh        # API 测试脚本
+    ├── test-api.sh         # API test script
+    └── test-grpc.sh       # gRPC test script
 ```
 
 **Key packages:**
@@ -70,12 +73,11 @@ apt install bubblewrap fuse-overlayfs
 ## How to Build
 
 ```bash
-# Full build
-go build -o bin/strata ./cmd/strata
-go build -o bin/strata-grpc ./cmd/grpc
+# Build
+make build
 
 # Or run directly
-go run ./cmd/strata
+go run .
 ```
 
 ---
@@ -293,7 +295,7 @@ mux.HandleFunc("GET /health", h.HandleHealth)
 
 1. Add to `pkg/proto/sandbox/sandbox.proto`
 2. Regenerate: `protoc --go_out=. --go-grpc_out=. pkg/proto/sandbox/sandbox.proto`
-3. Implement in `cmd/grpc.go`
+3. Implement in `pkg/rpc/service.go`
 
 ### Changing Overlay Driver
 
@@ -316,8 +318,8 @@ driver := sandbox.OverlayDriver("kernel")
 # Unit tests
 go test ./...
 
-# Start server
-go run .
+# Build and start server
+make build && ./strata
 
 # Run API test script (in another terminal)
 ./scripts/test-api.sh
