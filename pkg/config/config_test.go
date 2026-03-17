@@ -39,7 +39,7 @@ func TestLoadNonExistentFile(t *testing.T) {
 		t.Errorf("expected no error for non-existent file, got %v", err)
 	}
 	if cfg == nil {
-		t.Error("expected non-nil config")
+		t.Fatal("expected non-nil config")
 	}
 
 	// 应该返回默认配置

@@ -25,7 +25,7 @@ type ExecResponse struct {
 //
 //	POST /api/sessions/{uid}/{sid}/exec
 //	Body: {"command":"ls -la","timeout_ms":5000}
-func (h *Handler) HandleExec(w http.ResponseWriter, r *http.Request) {
+func (h *handlerImpl) handleExec(w http.ResponseWriter, r *http.Request) {
 	uid := r.PathValue("uid")
 	sid := r.PathValue("sid")
 
@@ -111,13 +111,46 @@ func (h *Handler) HandleExec(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ExecInSession 在指定 session 中执行命令并返回输出
+func ExecInSession(sess interface{ Read([]byte) (int, error); Write([]byte) (int, error) }, cmd string, timeout time.Duration) (string, error) {
+	const marker = "__STRATA_EXEC_END__"
+	fullCmd := cmd + "; echo '" + marker + "'\n"
+
+	if _, err := sess.Write([]byte(fullCmd)); err != nil {
+		return "", fmt.Errorf("write to session failed: %w", err)
+	}
+
+	var buf bytes.Buffer
+	readBuf := make([]byte, 4096)
+	markerEnd := marker + "\r\n"
+	deadline := time.Now().Add(timeout)
+
+	for {
+		if time.Now().After(deadline) {
+			return "", fmt.Errorf("command timeout")
+		}
+		n, err := sess.Read(readBuf)
+		if err != nil {
+			return "", fmt.Errorf("read from session failed: %w", err)
+		}
+		buf.Write(readBuf[:n])
+
+		if idx := bytes.Index(buf.Bytes(), []byte(markerEnd)); idx >= 0 {
+			output := buf.Bytes()[:idx]
+			output = stripEcho(output, fullCmd)
+			return string(output), nil
+		}
+	}
+}
+
 // stripEcho 去掉终端回显的输入行（PTY 会将写入内容回显给读端）
 func stripEcho(output []byte, cmd string) []byte {
 	// 找第一个换行符，越过回显行
 	if idx := bytes.IndexByte(output, '\n'); idx >= 0 {
-		return bytes.TrimLeft(output[idx+1:], "\r\n")
+		output = bytes.TrimLeft(output[idx+1:], "\r\n")
 	}
-	return output
+	// 去掉末尾的空白字符
+	return bytes.TrimRight(output, " \t\r\n")
 }
 
 func min(a, b int) int {

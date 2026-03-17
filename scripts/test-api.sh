@@ -107,6 +107,32 @@ test_exec_command() {
     fi
 }
 
+test_exec_pwd_and_ls() {
+    log_info "测试: 执行 pwd 和 ls / 命令"
+
+    # 测试 pwd（显示当前目录）
+    local resp_pwd
+    resp_pwd=$(curl -s -X POST "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}/exec" \
+        -H "Content-Type: application/json" \
+        -d '{"command": "pwd"}')
+    if echo "$resp_pwd" | grep -q "tmp"; then
+        log_pass "pwd 命令成功: $resp_pwd"
+    else
+        log_fail "pwd 命令失败: $resp_pwd"
+    fi
+
+    # 测试 ls /（列出根目录文件）
+    local resp_ls
+    resp_ls=$(curl -s -X POST "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}/exec" \
+        -H "Content-Type: application/json" \
+        -d '{"command": "ls -l /"}')
+    if echo "$resp_ls" | grep -q "bin"; then
+        log_pass "ls / 命令成功: $resp_ls"
+    else
+        log_fail "ls / 命令失败: $resp_ls"
+    fi
+}
+
 test_exec_with_timeout() {
     log_info "测试: 命令执行超时处理"
     local resp
@@ -226,6 +252,7 @@ main() {
     echo "--- 会话管理测试 ---"
     test_create_session
     test_exec_command
+    test_exec_pwd_and_ls
     test_exec_with_timeout
 
     echo

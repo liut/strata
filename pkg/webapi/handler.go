@@ -7,31 +7,30 @@ import (
 	"github.com/liut/strata/pkg/sandbox"
 )
 
-// Handler 持有所有 HTTP 路由依赖
-type Handler struct {
+// Handler 接口用于注册路由
+type Handler interface {
+	Register(*http.ServeMux)
+}
+
+// handlerImpl 持有所有 HTTP 路由依赖
+type handlerImpl struct {
 	manager *sandbox.Manager
 }
 
-func NewHandler(m *sandbox.Manager) *Handler {
-	return &Handler{manager: m}
+func NewHandler(m *sandbox.Manager) Handler {
+	return &handlerImpl{manager: m}
 }
 
-// Routes 注册所有 HTTP 路由
-func (h *Handler) Routes() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /api/sessions", h.HandleCreateSession)
-	mux.HandleFunc("DELETE /api/sessions/{user}/{session}", h.HandleCloseSession)
-	mux.HandleFunc("POST /api/sessions/{uid}/{sid}/exec", h.HandleExec)
-	mux.HandleFunc("GET /api/stats", h.HandleStats)
-	mux.HandleFunc("GET /api/ws/{uid}/{sid}/shell", h.HandleShellWS) // WebSocket
-	return mux
+func (h *handlerImpl) Register(mux *http.ServeMux) {
+	mux.HandleFunc("POST /api/sessions", h.handleCreateSession)
+	mux.HandleFunc("DELETE /api/sessions/{user}/{session}", h.handleCloseSession)
+	mux.HandleFunc("POST /api/sessions/{uid}/{sid}/exec", h.handleExec)
+	mux.HandleFunc("GET /api/stats", h.handleStats)
+	mux.HandleFunc("GET /api/ws/{uid}/{sid}/shell", h.handleShellWS)
 }
 
-// HandleCreateSession 创建或复用 session
-//
-//	POST /api/sessions
-//	Body: {"user_id": "alice", "session_id": "s1"}
-func (h *Handler) HandleCreateSession(w http.ResponseWriter, r *http.Request) {
+// handleCreateSession 创建或复用 session
+func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		UserID    string `json:"user_id"`
 		SessionID string `json:"session_id"`
@@ -54,10 +53,8 @@ func (h *Handler) HandleCreateSession(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleCloseSession 关闭 session
-//
-//	DELETE /api/sessions/{user}/{session}
-func (h *Handler) HandleCloseSession(w http.ResponseWriter, r *http.Request) {
+// handleCloseSession 关闭 session
+func (h *handlerImpl) handleCloseSession(w http.ResponseWriter, r *http.Request) {
 	user := r.PathValue("user")
 	session := r.PathValue("session")
 
@@ -68,24 +65,22 @@ func (h *Handler) HandleCloseSession(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"status": "closed"})
 }
 
-// HandleStats 返回服务状态
-//
-//	GET /api/stats
-func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
+// handleStats 返回服务状态
+func (h *handlerImpl) handleStats(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, h.manager.Stats())
 }
 
-// ────────────────────────────────────────────
+// ───────────────────────────────────────────
 // Helper
-// ────────────────────────────────────────────
+// ───────────────────────────────────────────
 
 func jsonOK(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func jsonError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

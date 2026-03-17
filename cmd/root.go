@@ -34,7 +34,7 @@ var RootCmd = &cobra.Command{
 	Use:   "strata",
 	Short: "strata - lightweight session sandbox service",
 	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+		_ = cmd.Help()
 	},
 }
 
@@ -47,9 +47,7 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.AddCommand(webCmd)
-	RootCmd.AddCommand(grpcCmd)
-	RootCmd.AddCommand(mcpCmd)
+	RootCmd.AddCommand(runCmd)
 
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level: debug, info, warn, error")
 	RootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {

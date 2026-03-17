@@ -135,6 +135,16 @@ func (m *Manager) Close(userID, sessionID string) bool {
 	return ok
 }
 
+// CloseAll 关闭所有 session
+func (m *Manager) CloseAll() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, s := range m.sessions {
+		s.Close()
+	}
+	clear(m.sessions)
+}
+
 // Stats 返回当前活跃 session 数
 func (m *Manager) Stats() map[string]int {
 	m.mu.RLock()

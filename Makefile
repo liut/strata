@@ -1,5 +1,5 @@
 .SILENT:
-.PHONY: help gen proto clean dist build
+.PHONY: help gen proto clean dist build vet lint
 
 NAME:=strata
 ROOF:=github.com/liut/strata
@@ -31,6 +31,13 @@ gen proto:
 vet:
 	echo "Checking ./pkg/... ./cmd/... , with GOMOD=$(GOMOD)"
 	GO111MODULE=$(GOMOD) $(GO) vet -all ./pkg/...
+
+lint:
+	@if ! command -v golangci-lint &> /dev/null; then \
+		echo "Installing golangci-lint..."; \
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+	fi
+	golangci-lint run ./...
 
 build:
 	GO111MODULE=$(GOMOD) $(GO) build -ldflags "$(LDFLAGS)" -o $(NAME) .

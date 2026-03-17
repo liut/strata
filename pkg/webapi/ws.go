@@ -33,7 +33,7 @@ type wsMessage struct {
 //	服务端 → 客户端消息：
 //	  {"type":"output", "data":"<shell output>"}
 //	  {"type":"error",  "data":"session closed"}
-func (h *Handler) HandleShellWS(w http.ResponseWriter, r *http.Request) {
+func (h *handlerImpl) handleShellWS(w http.ResponseWriter, r *http.Request) {
 	userID := r.PathValue("uid")
 	sessID := r.PathValue("sid")
 	if userID == "" || sessID == "" {
@@ -50,7 +50,7 @@ func (h *Handler) HandleShellWS(w http.ResponseWriter, r *http.Request) {
 
 	sess, err := h.manager.GetOrCreate(userID, sessID)
 	if err != nil {
-		sendWSMsg(conn, wsMessage{Type: "error", Data: err.Error()})
+		_ = sendWSMsg(conn, wsMessage{Type: "error", Data: err.Error()})
 		return
 	}
 
@@ -60,7 +60,7 @@ func (h *Handler) HandleShellWS(w http.ResponseWriter, r *http.Request) {
 		for {
 			n, err := sess.Read(buf)
 			if err != nil {
-				sendWSMsg(conn, wsMessage{Type: "error", Data: "session closed"})
+				_ = sendWSMsg(conn, wsMessage{Type: "error", Data: "session closed"})
 				conn.Close()
 				return
 			}

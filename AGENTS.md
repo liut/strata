@@ -317,7 +317,7 @@ driver := sandbox.OverlayDriver("kernel")
 go test ./...
 
 # Start server
-go run ./cmd/strata
+go run .
 
 # Run API test script (in another terminal)
 ./scripts/test-api.sh

@@ -435,53 +435,6 @@ func buildBwrapFallback(homeDir string, isolateNet bool) *exec.Cmd {
 	return exec.Command("bwrap", args...)
 }
 
-// buildBwrapFallbackFull 完整版本的 fallback（如果简单版本不行）
-func buildBwrapFallbackFull(homeDir string, isolateNet bool) *exec.Cmd {
-	// 只绑定存在的目录（按优先级：/bin, /lib, /lib64, /sbin）
-	// 注意：/usr 在某些环境下 pivot_root 后不可用，优先使用独立目录
-	dirs := []string{"/bin", "/lib", "/lib64", "/sbin"}
-	var args []string
-	for _, d := range dirs {
-		if _, err := os.Stat(d); err == nil {
-			args = append(args, "--ro-bind", d, d)
-		}
-	}
-	// 如果 /usr 存在且上面没有绑定任何目录，尝试 /usr
-	if len(args) == 0 {
-		if _, err := os.Stat("/usr"); err == nil {
-			args = append(args, "--ro-bind", "/usr", "/usr")
-		}
-	}
-
-	// 基础参数
-	args = append(args,
-		"--proc", "/proc",
-		"--dev", "/dev",
-		"--tmpfs", "/tmp",
-		"--tmpfs", "/var",
-		"--tmpfs", "/run",
-		"--bind", homeDir, "/root",
-		"--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf",
-		"--ro-bind", "/etc/passwd", "/etc/passwd",
-		"--ro-bind", "/etc/group", "/etc/group",
-		"--unshare-pid",
-		"--unshare-ipc",
-		"--unshare-uts",
-		"--hostname", "strata",
-		"--die-with-parent",
-		"--setenv", "HOME", "/root",
-		"--setenv", "USER", "root",
-		"--setenv", "TERM", "xterm-256color",
-		"--setenv", "PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-	)
-	if isolateNet {
-		args = append(args, "--unshare-net")
-	}
-	bash := findBash()
-	args = append(args, bash, "--login")
-	return exec.Command("bwrap", args...)
-}
-
 // buildUnshareFallback 使用 unshare 代替 bwrap（用于 bwrap 不工作的环境）
 func buildUnshareFallback(homeDir string, isolateNet bool) *exec.Cmd {
 	// 构建一个脚本，在 unshare 环境中设置挂载并启动 shell
