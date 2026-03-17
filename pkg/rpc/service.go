@@ -130,9 +130,9 @@ func (s *Service) Shell(stream pb.SandboxService_ShellServer) error {
 			}
 			switch p := msg.Payload.(type) {
 			case *pb.ShellInput_StdinData:
-				sess.Write(p.StdinData)
+				_, _ = sess.Write(p.StdinData)
 			case *pb.ShellInput_Resize:
-				sess.Resize(uint16(p.Resize.Rows), uint16(p.Resize.Cols))
+				_ = sess.Resize(uint16(p.Resize.Rows), uint16(p.Resize.Cols))
 			}
 		}
 	}()

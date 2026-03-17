@@ -23,8 +23,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-var configPath string
-
 var runCmd = &cobra.Command{
 	Use:     "run",
 	Short:   "Start all services (HTTP + gRPC + MCP)",
@@ -32,15 +30,15 @@ var runCmd = &cobra.Command{
 	RunE:    runAll,
 }
 
-func init() {
-	runCmd.Flags().StringVar(&configPath, "config", "configs/config.yaml", "path to config file")
-}
-
 func runAll(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	// 设置全局配置
+	config.Current = cfg
+	cfg.Version = version
 
 	slog.Info("starting strata", "version", version)
 	slog.Info("lightweight session sandbox service")

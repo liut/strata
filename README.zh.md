@@ -58,8 +58,8 @@ make build
 # 启动（默认配置）
 ./strata
 
-# 或指定配置文件
-./strata -config configs/config.yaml
+# 或使用自定义环境变量
+STRATA_SERVER_ADDR=:9000 ./strata
 ```
 
 ### 3. 使用 API
@@ -124,23 +124,21 @@ protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
 
 ## 配置
 
-`configs/config.yaml`:
+配置通过环境变量提供。
 
-```yaml
-server:
-  addr: ":8080"
+### 环境变量
 
-sandbox:
-  base_rootfs: ""                    # 基础只读根（可选）
-  session_root: "/tmp/strata/sessions"
-  session_ttl: "30m"
-  max_sessions: 100
-  isolate_network: false
-  overlay_driver: "fuse"             # fuse | kernel | none
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS 监听地址 |
+| `STRATA_SANDBOX_BASE_ROOTFS` | - | 基础只读根（可选） |
+| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session 工作目录 |
+| `STRATA_SANDBOX_SESSION_TTL` | `30m` | 不活跃 Session 超时 |
+| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大并发 Session 数 |
+| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay 驱动: fuse/kernel/none |
+| `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | 启用网络隔离 |
 
-grpc:
-  addr: ":9090"
-```
+查看所有选项：`./strata run --help`
 
 ## 可选：制作基础镜像
 

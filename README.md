@@ -58,8 +58,8 @@ make build
 # Start (default config)
 ./strata
 
-# Or with custom config
-./strata -config configs/config.yaml
+# Or with custom environment variables
+STRATA_SERVER_ADDR=:9000 ./strata
 ```
 
 ### 3. Use API
@@ -124,23 +124,21 @@ protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
 
 ## Configuration
 
-`configs/config.yaml`:
+Configuration is provided via environment variables.
 
-```yaml
-server:
-  addr: ":8080"
+### Environment Variables
 
-sandbox:
-  base_rootfs: ""                    # Base rootfs (optional)
-  session_root: "/tmp/strata/sessions"
-  session_ttl: "30m"
-  max_sessions: 100
-  isolate_network: false
-  overlay_driver: "fuse"             # fuse | kernel | none
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS listen address |
+| `STRATA_SANDBOX_BASE_ROOTFS` | - | Base read-only rootfs (optional) |
+| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session working directory |
+| `STRATA_SANDBOX_SESSION_TTL` | `30m` | Inactive session timeout |
+| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max concurrent sessions |
+| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay driver: fuse/kernel/none |
+| `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
 
-grpc:
-  addr: ":9090"
-```
+View all options: `./strata run --help`
 
 ## Optional: Build Base Image
 

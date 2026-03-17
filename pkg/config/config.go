@@ -1,67 +1,66 @@
 package config
 
 import (
-	"os"
+	"log"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/kelseyhightower/envconfig"
 )
 
+// Config 应用配置
 type Config struct {
-	Server  ServerConfig  `yaml:"server"`
-	Sandbox SandboxConfig `yaml:"sandbox"`
-	GRPC    GRPCConfig    `yaml:"grpc"`
+	Name    string `ignored:"true"`
+	Version string `ignored:"true"`
+
+	Server  ServerConfig  `envconfig:"SERVER"`
+	Sandbox SandboxConfig `envconfig:"SANDBOX"`
 }
 
 type ServerConfig struct {
-	Addr string `yaml:"addr"` // HTTP/WS listen address
-
-	// 日志配置
-	AccessLog string `yaml:"access_log"` // 访问日志文件路径，空则输出到 stdout
+	Addr      string `envconfig:"ADDR" default:":8080" desc:"HTTP/WS listen address"`
+	AccessLog string `envconfig:"ACCESS_LOG" desc:"Access log file path, empty for stdout"`
 }
 
 type SandboxConfig struct {
 	// 基础只读根文件系统路径；为空则自动 fallback 到宿主目录 bind
-	BaseRootfs  string        `yaml:"base_rootfs"`
-	SessionRoot string        `yaml:"session_root"` // session 工作目录根
-	SessionTTL  time.Duration `yaml:"session_ttl"`  // 不活跃超时
-	MaxSessions int           `yaml:"max_sessions"` // 全局最大 session 数
+	BaseRootfs string `envconfig:"BASE_ROOTFS" desc:"Base read-only rootfs path"`
+
+	SessionRoot string        `envconfig:"SESSION_ROOT" default:"/tmp/strata/sessions" desc:"Session working directory root"`
+	SessionTTL  time.Duration `envconfig:"SESSION_TTL" default:"30m" desc:"Inactive session timeout"`
+	MaxSessions int           `envconfig:"MAX_SESSIONS" default:"100" desc:"Global max session count"`
 
 	// 网络隔离开关：true 则每个 session 拥有独立 network namespace
-	IsolateNetwork bool `yaml:"isolate_network"`
+	IsolateNetwork bool `envconfig:"ISOLATE_NETWORK" desc:"Enable network isolation per session"`
 
 	// Overlay 驱动: "fuse" | "kernel" | "none"
 	// "fuse"   → fuse-overlayfs（无 root，推荐）
 	// "kernel" → unshare+mount（需 Linux ≥ 5.11 + 正确配置）
 	// "none"   → 纯 bwrap tmpfs（无持久写入层，降级模式）
-	OverlayDriver string `yaml:"overlay_driver"`
+	OverlayDriver string `envconfig:"OVERLAY_DRIVER" default:"fuse" desc:"Overlay driver: fuse|kernel|none"`
 }
 
-type GRPCConfig struct {
-	Addr string `yaml:"addr"`
-}
+var (
+	// Current 当前配置
+	Current = new(Config)
+)
 
-func Load(path string) (*Config, error) {
+// Load 从环境变量加载配置
+func Load() (*Config, error) {
 	cfg := defaultConfig()
 
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return cfg, nil // 配置文件不存在则使用默认值
-		}
+	// 从环境变量加载
+	if err := envconfig.Process("strata", cfg); err != nil {
 		return nil, err
 	}
 
-	if err := yaml.Unmarshal(data, cfg); err != nil {
-		return nil, err
-	}
 	return cfg, nil
 }
 
 func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Addr: ":8080",
+			Addr:      ":8080",
+			AccessLog: "",
 		},
 		Sandbox: SandboxConfig{
 			BaseRootfs:     "",
@@ -71,8 +70,11 @@ func defaultConfig() *Config {
 			IsolateNetwork: false,
 			OverlayDriver:  "fuse",
 		},
-		GRPC: GRPCConfig{
-			Addr: ":9090",
-		},
 	}
+}
+
+// Usage 打印配置帮助信息
+func Usage() error {
+	log.Printf("ver: %s", Current.Version)
+	return envconfig.Usage("strata", Current)
 }
