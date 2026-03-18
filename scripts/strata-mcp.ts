@@ -3,16 +3,20 @@
 /**
  * Strata MCP Client
  *
- * 为 AI Agent 提供沙盒 Shell 操作能力
+ * Provides sandboxed shell operations for AI Agents via MCP protocol.
+ * Communicates with Strata server over HTTP.
  *
- * 环境变量:
- *   STRATA_API      Strata 服务地址 (默认: http://localhost:8080)
- *   STRATA_UID     用户标识 (设置后工具调用无需再传 user_id)
+ * Environment Variables:
+ *   STRATA_API    Strata server URL (default: http://localhost:8080)
+ *   STRATA_UID    Default user ID (if set, user_id param becomes optional)
  *
- * 使用方式:
+ * Usage:
  *   npx tsx scripts/strata-mcp.ts
- *   # 或指定用户:
+ *   # or with fixed user:
  *   STRATA_UID=alice npx tsx scripts/strata-mcp.ts
+ *
+ * Protocol: STDIO (MCP standard)
+ *   The server communicates with the AI agent via stdin/stdout.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -31,18 +35,18 @@ interface Session {
   created_at?: string;
 }
 
-// 缓存已创建的 session
+// Cache created sessions
 const sessions = new Map<string, Session>();
 
-// 根据是否设置 STRATA_UID 动态生成工具定义
+// Dynamically build tools based on STRATA_UID presence
 function buildTools() {
   const userIdProp = STRATA_UID
-    ? { description: `用户标识 (已固定为 ${STRATA_UID})` }
-    : { type: "string", description: "用户标识，如 'alice'" };
+    ? { description: `User ID (fixed to ${STRATA_UID})` }
+    : { type: "string", description: "User identifier, e.g., 'alice'" };
 
   const baseProps = {
     user_id: { ...userIdProp },
-    session_id: { type: "string", description: "会话标识，如 'task-001'" },
+    session_id: { type: "string", description: "Session identifier, e.g., 'task-001'" },
   };
 
   const requireUserId = !STRATA_UID;
@@ -50,7 +54,7 @@ function buildTools() {
   return [
     {
       name: "strata_create_session",
-      description: `创建或复用一个新的沙盒会话${STRATA_UID ? ` (用户: ${STRATA_UID})` : ""}`,
+      description: `Create or reuse a sandbox session${STRATA_UID ? ` (user: ${STRATA_UID})` : ""}`,
       inputSchema: {
         type: "object",
         properties: requireUserId ? baseProps : { session_id: baseProps.session_id },
@@ -59,48 +63,48 @@ function buildTools() {
     },
     {
       name: "strata_exec",
-      description: "在指定会话中执行一条 Shell 命令，返回命令输出。",
+      description: "Execute a shell command in the specified session and return the output.",
       inputSchema: {
         type: "object",
         properties: {
           ...(requireUserId ? { user_id: baseProps.user_id } : {}),
           session_id: baseProps.session_id,
-          command: { type: "string", description: "要执行的 Shell 命令" },
-          timeout_ms: { type: "number", description: "超时毫秒数，默认 30000", default: 30000 },
+          command: { type: "string", description: "Shell command to execute" },
+          timeout_ms: { type: "number", description: "Timeout in milliseconds, default 30000", default: 30000 },
         },
         required: [...(requireUserId ? ["user_id"] : []), "session_id", "command"],
       },
     },
     {
       name: "strata_write_file",
-      description: "在沙盒会话的文件系统中创建或覆写文件。",
+      description: "Create or overwrite a file in the sandbox session.",
       inputSchema: {
         type: "object",
         properties: {
           ...(requireUserId ? { user_id: baseProps.user_id } : {}),
           session_id: baseProps.session_id,
-          path: { type: "string", description: "目标文件路径，如 '/tmp/test.py'" },
-          content: { type: "string", description: "文件内容" },
+          path: { type: "string", description: "Target file path, e.g., '/tmp/test.py'" },
+          content: { type: "string", description: "File content" },
         },
         required: [...(requireUserId ? ["user_id"] : []), "session_id", "path", "content"],
       },
     },
     {
       name: "strata_read_file",
-      description: "读取沙盒会话中的文件内容。",
+      description: "Read file content from the sandbox session.",
       inputSchema: {
         type: "object",
         properties: {
           ...(requireUserId ? { user_id: baseProps.user_id } : {}),
           session_id: baseProps.session_id,
-          path: { type: "string", description: "要读取的文件路径" },
+          path: { type: "string", description: "File path to read" },
         },
         required: [...(requireUserId ? ["user_id"] : []), "session_id", "path"],
       },
     },
     {
       name: "strata_close_session",
-      description: "关闭并清理一个沙盒会话，释放资源。",
+      description: "Close and cleanup a sandbox session to release resources.",
       inputSchema: {
         type: "object",
         properties: {
@@ -112,7 +116,7 @@ function buildTools() {
     },
     {
       name: "strata_stats",
-      description: "查询当前服务状态（活跃会话数等）。",
+      description: "Query service status (active sessions, etc.).",
       inputSchema: {
         type: "object",
         properties: {},
@@ -121,7 +125,7 @@ function buildTools() {
   ];
 }
 
-// 获取实际 user_id（优先使用参数，否则使用环境变量）
+// Get actual user_id (prefer args, fallback to env var)
 function getUserId(argsUserId?: string): string {
   if (argsUserId && argsUserId.trim()) {
     return argsUserId;
@@ -129,7 +133,7 @@ function getUserId(argsUserId?: string): string {
   return STRATA_UID;
 }
 
-// 动态生成的工具列表
+// Dynamically generated tools list
 const TOOLS = buildTools();
 
 async function apiCall<T>(path: string, body: any): Promise<T> {
@@ -146,7 +150,7 @@ async function apiCall<T>(path: string, body: any): Promise<T> {
 }
 
 // ─────────────────────────────────────────────────────────
-// Server 实现
+// Server Implementation
 // ─────────────────────────────────────────────────────────
 
 class StrataMCPServer {
@@ -230,7 +234,7 @@ class StrataMCPServer {
     const { session_id, command, timeout_ms = 30000 } = args;
     const key = `${user_id}:${session_id}`;
 
-    // 确保 session 存在
+    // Ensure session exists
     if (!sessions.has(key)) {
       await this.handleCreateSession({ user_id, session_id });
     }
@@ -294,7 +298,7 @@ class StrataMCPServer {
   }
 }
 
-// 启动
+// Start the server
 new StrataMCPServer().start().catch((err) => {
   console.error("Fatal:", err);
   process.exit(1);
