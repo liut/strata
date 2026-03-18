@@ -2,13 +2,9 @@
 
 > Lightweight Session Sandbox Service — Isolated Shell Environments via Namespace + Overlayfs
 
-```
-strata v0.1.0 — lightweight session sandbox service
-```
-
 ## Features
 
-- **Lightweight Isolation**: No Docker Daemon dependency, uses Linux Namespace + bubblewrap + fuse-overlayfs
+- **Lightweight Isolation**: Linux Namespace + bubblewrap + fuse-overlayfs, runs standalone or in Docker
 - **User/Session Isolation**: Isolated by user_id + session_id, each session has its own writable layer
 - **Multi-Protocol Support**: HTTP REST / WebSocket / gRPC / MCP
 - **Persistent Writes**: overlayfs layering, changes don't affect base image
@@ -56,10 +52,10 @@ Ensure the following dependencies are available:
 make build
 
 # Start (default config)
-./strata
+./dist/strata
 
 # Or with custom environment variables
-STRATA_SERVER_ADDR=:9000 ./strata
+STRATA_SERVER_ADDR=:9000 ./dist/strata
 ```
 
 ### 3. Use API
@@ -96,7 +92,7 @@ http://localhost:2280/mcp/
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/sessions` | Create/reuse session |
-| DELETE | `/api/sessions/{user}/{session}` | Close session |
+| DELETE | `/api/sessions/{uid}/{sid}` | Close session |
 | POST | `/api/sessions/{uid}/{sid}/exec` | Execute command |
 | GET | `/api/stats` | Service stats |
 
@@ -138,7 +134,7 @@ Configuration is provided via environment variables.
 | `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay driver: fuse/kernel/none |
 | `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
 
-View all options: `./strata run --help`
+View all options: `./dist/strata run --help`
 
 ## Optional: Build Base Image
 

@@ -149,7 +149,7 @@ test_exec_with_timeout() {
 }
 
 test_close_session() {
-    log_info "测试: DELETE /api/sessions/{user}/{session}"
+    log_info "测试: DELETE /api/sessions/{uid}/{sid}"
     local resp
     resp=$(curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}")
 

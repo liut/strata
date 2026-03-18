@@ -23,7 +23,7 @@ func NewHandler(m *sandbox.Manager) Handler {
 
 func (h *handlerImpl) Register(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/sessions", h.handleCreateSession)
-	mux.HandleFunc("DELETE /api/sessions/{user}/{session}", h.handleCloseSession)
+	mux.HandleFunc("DELETE /api/sessions/{uid}/{sid}", h.handleCloseSession)
 	mux.HandleFunc("POST /api/sessions/{uid}/{sid}/exec", h.handleExec)
 	mux.HandleFunc("GET /api/stats", h.handleStats)
 	mux.HandleFunc("GET /api/ws/{uid}/{sid}/shell", h.handleShellWS)
@@ -55,10 +55,10 @@ func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request
 
 // handleCloseSession 关闭 session
 func (h *handlerImpl) handleCloseSession(w http.ResponseWriter, r *http.Request) {
-	user := r.PathValue("user")
-	session := r.PathValue("session")
+	uid := r.PathValue("uid")
+	sid := r.PathValue("sid")
 
-	if ok := h.manager.Close(user, session); !ok {
+	if ok := h.manager.Close(uid, sid); !ok {
 		jsonError(w, "session not found", http.StatusNotFound)
 		return
 	}

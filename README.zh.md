@@ -2,13 +2,9 @@
 
 > Lightweight Session Sandbox Service — 基于 namespace + overlayfs 的轻量隔离 Shell 环境服务
 
-```
-strata v0.1.0 — lightweight session sandbox service
-```
-
 ## 核心特性
 
-- **轻量隔离**：不依赖 Docker Daemon，使用 Linux Namespace + bubblewrap + fuse-overlayfs
+- **轻量隔离**：基于 Linux Namespace + bubblewrap + fuse-overlayfs，可独立运行或部署在 Docker 中
 - **用户/会话隔离**：按 user_id + session_id 隔离，每个会话拥有独立的可写层
 - **多协议支持**：HTTP REST / WebSocket / gRPC / MCP
 - **持久化写入**：overlayfs 层叠机制，修改不影响基础镜像
@@ -56,10 +52,10 @@ strata v0.1.0 — lightweight session sandbox service
 make build
 
 # 启动（默认配置）
-./strata
+./dist/strata
 
 # 或使用自定义环境变量
-STRATA_SERVER_ADDR=:9000 ./strata
+STRATA_SERVER_ADDR=:9000 ./dist/strata
 ```
 
 ### 3. 使用 API
@@ -96,7 +92,7 @@ http://localhost:2280/mcp/
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/sessions` | 创建/复用会话 |
-| DELETE | `/api/sessions/{user}/{session}` | 关闭会话 |
+| DELETE | `/api/sessions/{uid}/{sid}` | 关闭会话 |
 | POST | `/api/sessions/{uid}/{sid}/exec` | 执行命令 |
 | GET | `/api/stats` | 服务状态 |
 
@@ -138,7 +134,7 @@ protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
 | `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay 驱动: fuse/kernel/none |
 | `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | 启用网络隔离 |
 
-查看所有选项：`./strata run --help`
+查看所有选项：`./dist/strata run --help`
 
 ## 可选：制作基础镜像
 

@@ -94,7 +94,7 @@ Configuration is provided via environment variables:
 | `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay driver: fuse/kernel/none |
 | `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
 
-View all options: `./strata run --help`
+View all options: `./dist/strata run --help`
 
 ---
 
@@ -102,10 +102,10 @@ View all options: `./strata run --help`
 
 ```bash
 # HTTP + WebSocket
-./strata
+./dist/strata
 
 # Or with custom environment variables
-STRATA_SERVER_ADDR=:9000 ./strata
+STRATA_SERVER_ADDR=:9000 ./dist/strata
 ```
 
 Service will listen on:
@@ -280,7 +280,7 @@ mux.HandleFunc("GET /health", h.HandleHealth)
 
 Via environment variable:
 ```bash
-STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./strata
+STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./dist/strata
 ```
 
 Or in code (`pkg/config/config.go`):
@@ -297,7 +297,7 @@ driver := sandbox.OverlayDriver("kernel")
 go test ./...
 
 # Build and start server
-make build && ./strata
+make build && ./dist/strata
 
 # Run API test script (in another terminal)
 ./scripts/test-api.sh
