@@ -1,16 +1,16 @@
 # Strata
 
-> 轻量级会话沙箱服务 — 基于 namespace + overlayfs 的隔离 Shell 环境
+> 轻量级会话沙箱 — 基于 Namespace + Overlayfs 的隔离 Shell
 
 [English](./README.md)
 
-## 核心特性
+## 特性
 
-- **轻量隔离**：基于 Linux Namespace + bubblewrap + fuse-overlayfs，可独立运行或部署在 Docker 中
-- **用户/会话隔离**：按 user_id + session_id 隔离，每个会话拥有独立的可写层
-- **多协议支持**：HTTP REST / WebSocket / gRPC / MCP
-- **持久化写入**：overlayfs 层叠机制，修改不影响基础镜像
-- **自动回收**：TTL 超时自动清理不活跃会话
+- **轻量**: Linux Namespace + bubblewrap + fuse-overlayfs
+- **隔离**: 按用户+会话隔离，独立可写层
+- **多协议**: HTTP REST / WebSocket / gRPC / MCP
+- **持久化**: overlayfs 层叠，修改不影响基础镜像
+- **自动清理**: TTL 超时自动清理
 
 ## 架构
 
@@ -29,38 +29,25 @@
 │  Isolation Layer                            │
 │  bwrap + overlayfs (fuse-overlayfs)         │
 │  ├── PID/IPC/UTS Namespace                  │
-│  ├── overlay: lower + upper + merged        │
+│  ├── overlay: lower + upper + merged         │
 │  └── PTY (pseudo-terminal)                  │
 └─────────────────────────────────────────────┘
 ```
 
 ## 快速开始
 
-### 1. 环境检查
-
 ```bash
+# 检查依赖
 ./scripts/check-env.sh
-```
 
-确保以下依赖可用：
-- `bubblewrap` (bwrap)
-- `fuse-overlayfs`
-- `/dev/fuse` 设备
-
-### 2. 运行服务
-
-```bash
 # 编译
 make build
 
-# 启动（默认配置）
+# 运行
 ./dist/strata
-
-# 或使用自定义环境变量
-STRATA_SERVER_ADDR=:9000 ./dist/strata
 ```
 
-### 3. 使用 API
+## 使用
 
 ```bash
 # 创建会话
@@ -69,109 +56,49 @@ curl -X POST http://localhost:2280/api/sessions \
   -d '{"user_id": "alice", "session_id": "task-001"}'
 
 # 执行命令
-curl -X POST http://localhost:2280/api/exec \
+curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "alice", "session_id": "task-001", "command": "ls -la"}'
+  -d '{"command": "ls -la"}'
 
-# 交互式 Shell（WebSocket）
+# 交互式 Shell (WebSocket)
 wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
-# 输入: {"type": "input", "data": "ls -la\n"}
 ```
 
-### 4. MCP 集成（AI Agent）
-
-服务启动后，MCP 通过同一端口的 `/mcp/` 端点提供：
-
-```bash
-# MCP 端点
-http://localhost:2280/mcp/
-```
-
-## API 参考
-
-### HTTP REST
+## API
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/sessions` | 创建/复用会话 |
+| POST | `/api/sessions` | 创建会话 |
 | DELETE | `/api/sessions/{uid}/{sid}` | 关闭会话 |
 | POST | `/api/sessions/{uid}/{sid}/exec` | 执行命令 |
-| GET | `/api/stats` | 服务状态 |
+| GET | `/api/stats` | 状态 |
+| GET | `/api/ws/{uid}/{sid}/shell` | WebSocket |
 
-### WebSocket
+## MCP
 
-| 路径 | 说明 |
-|------|------|
-| `/api/ws/{uid}/{sid}/shell` | 交互式 Shell |
+MCP 端点: `http://localhost:2280/mcp/`
 
-消息格式：
-- 客户端 → 服务端：`{"type":"input", "data": "ls -la\n"}`
-- 服务端 → 客户端：`{"type":"output", "data": "..."}`
-
-### gRPC
-
-参见 `pkg/proto/sandbox/sandbox.proto`
-
+AI Agent 使用:
 ```bash
-# 生成 Go 代码
-go generate ./...
-
-# 或手动
-protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
+npx tsx scripts/strata-mcp.ts
 ```
 
 ## 配置
 
-配置通过环境变量提供。
-
-### 环境变量
-
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `STRATA_SERVER_ADDR` | `:2280` | HTTP/WS 监听地址 |
-| `STRATA_SANDBOX_BASE_ROOTFS` | - | 基础只读根（可选） |
-| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session 工作目录 |
-| `STRATA_SANDBOX_SESSION_TTL` | `30m` | 不活跃 Session 超时 |
-| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大并发 Session 数 |
-| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay 驱动: fuse/kernel/none |
-| `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | 启用网络隔离 |
+| `STRATA_SERVER_ADDR` | `:2280` | 监听地址 |
+| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | 会话目录 |
+| `STRATA_SANDBOX_SESSION_TTL` | `30m` | 会话超时 |
+| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大会话数 |
+| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | fuse/kernel/none |
 
-查看所有选项：`./dist/strata run --help`
-
-## 隔离机制详解
-
-### 为什么不用 Docker？
-
-Docker 的"重"在于：
-- Daemon 常驻
-- 完整镜像层管理
-- 复杂网络模型
-
-而**隔离本身**（Namespace + cgroups）极轻——一个 bwrap 进程启动只需 ~5ms，内存占用 < 1MB。
-
-### 为什么用 fuse-overlayfs？
-
-- 普通用户可直接挂载（无需 root）
-- 语义与内核 overlayfs 完全一致
-- rootless Podman 的默认 storage driver
-
-### Session 生命周期
-
-```
-创建 → overlay mount → bwrap 启动 → PTY 建立
-                ↓
-用户执行命令 → 写入 upper 层（不影响 base）
-                ↓
-关闭 → PTY 关闭 → overlay unmount → 删除 upper
-```
+查看全部: `./dist/strata run --help`
 
 ## 依赖
 
-- Linux kernel ≥ 5.11（推荐）
-- bwrap (bubblewrap)
-- fuse-overlayfs
-- Go ≥ 1.25 (build only)
-
-## License
+- Linux kernel ≥ 5.11
+- bwrap, fuse-overlayfs
+- Go ≥ 1.25 (仅编译)
 
 MIT

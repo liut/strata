@@ -1,16 +1,16 @@
 # Strata
 
-> Lightweight Session Sandbox Service — Isolated Shell Environments via Namespace + Overlayfs
+> Lightweight Session Sandbox — Isolated Shell via Namespace + Overlayfs
 
 [中文版](./README.zh.md)
 
 ## Features
 
-- **Lightweight Isolation**: Linux Namespace + bubblewrap + fuse-overlayfs, runs standalone or in Docker
-- **User/Session Isolation**: Isolated by user_id + session_id, each session has its own writable layer
-- **Multi-Protocol Support**: HTTP REST / WebSocket / gRPC / MCP
-- **Persistent Writes**: overlayfs layering, changes don't affect base image
-- **Auto Cleanup**: TTL-based automatic cleanup of inactive sessions
+- **Lightweight**: Linux Namespace + bubblewrap + fuse-overlayfs
+- **Isolated**: Per-user + per-session with writable overlay layer
+- **Multi-Protocol**: HTTP REST / WebSocket / gRPC / MCP
+- **Persistent**: overlayfs layering, changes don't affect base
+- **Auto Cleanup**: TTL-based session cleanup
 
 ## Architecture
 
@@ -29,38 +29,25 @@
 │  Isolation Layer                            │
 │  bwrap + overlayfs (fuse-overlayfs)         │
 │  ├── PID/IPC/UTS Namespace                  │
-│  ├── overlay: lower + upper + merged        │
+│  ├── overlay: lower + upper + merged         │
 │  └── PTY (pseudo-terminal)                  │
 └─────────────────────────────────────────────┘
 ```
 
 ## Quick Start
 
-### 1. Check Environment
-
 ```bash
+# Check dependencies
 ./scripts/check-env.sh
-```
 
-Ensure the following dependencies are available:
-- `bubblewrap` (bwrap)
-- `fuse-overlayfs`
-- `/dev/fuse` device
-
-### 2. Run Service
-
-```bash
 # Build
 make build
 
-# Start (default config)
+# Run
 ./dist/strata
-
-# Or with custom environment variables
-STRATA_SERVER_ADDR=:9000 ./dist/strata
 ```
 
-### 3. Use API
+## Usage
 
 ```bash
 # Create session
@@ -73,105 +60,45 @@ curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
   -H "Content-Type: application/json" \
   -d '{"command": "ls -la"}'
 
-# Interactive Shell (WebSocket)
+# Interactive shell (WebSocket)
 wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
-# Input: {"type": "input", "data": "ls -la\n"}
 ```
 
-### 4. MCP Integration (AI Agent)
-
-When the service is running, MCP is available at the `/mcp/` endpoint on the same port:
-
-```bash
-# MCP endpoint
-http://localhost:2280/mcp/
-```
-
-## API Reference
-
-### HTTP REST
+## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/sessions` | Create/reuse session |
+| POST | `/api/sessions` | Create session |
 | DELETE | `/api/sessions/{uid}/{sid}` | Close session |
 | POST | `/api/sessions/{uid}/{sid}/exec` | Execute command |
-| GET | `/api/stats` | Service stats |
+| GET | `/api/stats` | Stats |
+| GET | `/api/ws/{uid}/{sid}/shell` | WebSocket |
 
-### WebSocket
+## MCP
 
-| Path | Description |
-|------|-------------|
-| `/api/ws/{uid}/{sid}/shell` | Interactive Shell |
+MCP available at `http://localhost:2280/mcp/`
 
-Message format:
-- Client → Server: `{"type":"input", "data": "ls -la\n"}`
-- Server → Client: `{"type":"output", "data": "..."}`
-
-### gRPC
-
-See `pkg/proto/sandbox/sandbox.proto`
-
+For AI agents:
 ```bash
-# Generate Go code
-make gen
-
-# Or manually
-protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
+npx tsx scripts/strata-mcp.ts
 ```
 
-## Configuration
-
-Configuration is provided via environment variables.
-
-### Environment Variables
+## Config
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STRATA_SERVER_ADDR` | `:2280` | HTTP/WS listen address |
-| `STRATA_SANDBOX_BASE_ROOTFS` | - | Base read-only rootfs (optional) |
-| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session working directory |
-| `STRATA_SANDBOX_SESSION_TTL` | `30m` | Inactive session timeout |
-| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max concurrent sessions |
-| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | Overlay driver: fuse/kernel/none |
-| `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
+| `STRATA_SERVER_ADDR` | `:2280` | Listen address |
+| `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session directory |
+| `STRATA_SANDBOX_SESSION_TTL` | `30m` | Session timeout |
+| `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max sessions |
+| `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | fuse/kernel/none |
 
-View all options: `./dist/strata run --help`
-
-## Isolation Details
-
-### Why not Docker?
-
-Docker is "heavy" because of:
-- Daemon always running
-- Full image layer management
-- Complex network model
-
-But **isolation itself** (Namespace + cgroups) is extremely lightweight — a bwrap process starts in ~5ms with <1MB memory usage.
-
-### Why fuse-overlayfs?
-
-- Can be mounted by regular users (no root required)
-- Semantics identical to kernel overlayfs
-- Default storage driver for rootless Podman
-
-### Session Lifecycle
-
-```
-Create → overlay mount → bwrap start → PTY establish
-                ↓
-User runs command → writes to upper layer (doesn't affect base)
-                ↓
-Close → PTY close → overlay unmount → delete upper
-```
+View all: `./dist/strata run --help`
 
 ## Dependencies
 
-- Linux kernel ≥ 5.11 (recommended)
-- bwrap (bubblewrap)
-- fuse-overlayfs
+- Linux kernel ≥ 5.11
+- bwrap, fuse-overlayfs
 - Go ≥ 1.25 (build only)
-
-## License
 
 MIT
