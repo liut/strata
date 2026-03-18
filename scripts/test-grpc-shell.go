@@ -115,6 +115,7 @@ func main() {
 	// goroutine: 接收服务端输出
 	go func() {
 		defer wg.Done()
+		commandsSent := false
 		for {
 			resp, err := stream.Recv()
 			if err == io.EOF {
@@ -133,6 +134,36 @@ func main() {
 				fmt.Printf("Error: %s\n", resp.Error)
 			}
 			fmt.Print(string(resp.Data))
+
+			// 收到第一行输出后，发送演示命令
+			if !commandsSent {
+				commandsSent = true
+				commands := []string{
+					"pwd\n",
+					"ls -la\n",
+					"echo 'Hello from strata' > test.txt\n",
+					"cat test.txt\n",
+					"mkdir -p demoDir\n",
+					"touch demoDir/file1.txt demoDir/file2.txt\n",
+					"ls -la demoDir/\n",
+					"rm test.txt\n",
+					"rm -rf demoDir\n",
+					"ls -la\n",
+					"whoami\n",
+					"date\n",
+					"echo 'All demos completed!'\n",
+				}
+				go func() {
+					time.Sleep(300 * time.Millisecond)
+					for _, cmd := range commands {
+						if err := stream.Send(&pb.ShellInput{Payload: &pb.ShellInput_StdinData{StdinData: []byte(cmd)}}); err != nil {
+							fmt.Printf("Send error: %v\n", err)
+							return
+						}
+						time.Sleep(200 * time.Millisecond)
+					}
+				}()
+			}
 		}
 	}()
 
@@ -162,8 +193,8 @@ func main() {
 		}
 	}()
 
-	// 等待一小段时间看输出
-	time.Sleep(2 * time.Second)
+	// 等待命令执行完成
+	time.Sleep(5 * time.Second)
 	cancel()
 	wg.Wait()
 
