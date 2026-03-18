@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// TestSanitizeKey 测试 sanitizeKey 函数 - 环境无关
-func TestSanitizeKey(t *testing.T) {
+// TestKeyReplacer 测试 keyReplacer 变量 - 环境无关
+func TestKeyReplacer(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -24,9 +24,9 @@ func TestSanitizeKey(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.input, func(t *testing.T) {
-			result := sanitizeKey(tc.input)
+			result := keyReplacer.Replace(tc.input)
 			if result != tc.expected {
-				t.Errorf("sanitizeKey(%q) = %q, want %q", tc.input, result, tc.expected)
+				t.Errorf("keyReplacer.Replace(%q) = %q, want %q", tc.input, result, tc.expected)
 			}
 		})
 	}

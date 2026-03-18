@@ -32,8 +32,8 @@ func (s *Service) CreateSession(ctx context.Context, req *pb.CreateSessionReques
 	}
 
 	return &pb.CreateSessionResponse{
-		UserId:    sess.UserID,
-		SessionId: sess.ID,
+		UserId:    sess.GetUID(),
+		SessionId: sess.GetID(),
 		CreatedAt: sess.Created.Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }

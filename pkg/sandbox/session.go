@@ -15,10 +15,16 @@ import (
 	"github.com/creack/pty"
 )
 
+// 将一些常规字符串转为安全的文件系统路径片段
+var keyReplacer = strings.NewReplacer(
+	"/", "_", ":", "_", " ", "_",
+	"..", "__", "~", "_", "@", "_",
+)
+
 // Session 表示一个用户隔离的 Shell 会话
 type Session struct {
-	ID      string
-	UserID  string
+	id      string
+	userID  string
 	Created time.Time
 	LastUse time.Time
 
@@ -34,6 +40,16 @@ type Session struct {
 	mu     sync.Mutex
 	closed bool
 	Done   chan struct{} // 关闭时关闭此 channel
+}
+
+// GetID 返回 session ID
+func (s *Session) GetID() string {
+	return s.id
+}
+
+// GetUID 返回 user ID
+func (s *Session) GetUID() string {
+	return s.userID
 }
 
 // Write 向 Shell 写入输入数据（用户键盘/指令）
@@ -133,7 +149,7 @@ func (s *Session) RestartBwrap() error {
 
 	// 重新创建 bwrap 命令
 	var cmd *exec.Cmd
-	homeDir := filepath.Join(s.sessionRoot, sanitizeKey(s.UserID+"_"+s.ID), "home")
+	homeDir := filepath.Join(s.sessionRoot, s.userID, s.id, "home")
 
 	if s.overlay.active && s.overlay.Merged != "" {
 		cmd = buildBwrapWithOverlay(s.overlay.Merged, homeDir, s.isolateNet)
@@ -166,7 +182,7 @@ func (s *Session) RestartBwrap() error {
 	// 启动新的 waitExit goroutine
 	go s.waitExit()
 
-	slog.Info("bwrap restarted", "session", s.ID, "pid", cmd.Process.Pid)
+	slog.Info("bwrap restarted", "session", s.id, "pid", cmd.Process.Pid)
 	return nil
 }
 
@@ -188,7 +204,7 @@ func (s *Session) waitExit() {
 	if s.cmd.ProcessState != nil {
 		exitCode = s.cmd.ProcessState.ExitCode()
 	}
-	slog.Info("bwrap exited (overlay still mounted)", "session", s.ID, "error", err,
+	slog.Info("bwrap exited (overlay still mounted)", "session", s.id, "error", err,
 		"exitCode", exitCode, "stderr", stderr)
 
 	// 不调用 Close，让 overlay 继续存在
@@ -209,8 +225,9 @@ type sessionOptions struct {
 }
 
 func newSession(opts sessionOptions) (*Session, error) {
-	key := sanitizeKey(opts.userID + "_" + opts.sessionID)
-	sessionDir := filepath.Join(opts.sessionRoot, key)
+	opts.userID = keyReplacer.Replace(opts.userID)
+	opts.sessionID = keyReplacer.Replace(opts.sessionID)
+	sessionDir := filepath.Join(opts.sessionRoot, opts.userID, opts.sessionID)
 	homeDir := filepath.Join(sessionDir, "home")
 
 	if err := os.MkdirAll(homeDir, 0700); err != nil {
@@ -326,8 +343,8 @@ func newSession(opts sessionOptions) (*Session, error) {
 	slog.Info("shell process started", "pid", cmd.Process.Pid, "driver", opts.driver)
 
 	s := &Session{
-		ID:          opts.sessionID,
-		UserID:      opts.userID,
+		id:          opts.sessionID,
+		userID:      opts.userID,
 		Created:     time.Now(),
 		LastUse:     time.Now(),
 		overlay:     overlay,
@@ -640,13 +657,4 @@ func copyLibToRootfs(libPath, baseRootfs string) error {
 	// 复制文件
 	targetPath := filepath.Join(targetDir, filepath.Base(libPath))
 	return copyFile(libPath, targetPath)
-}
-
-// sanitizeKey 将任意字符串转为安全的文件系统路径片段
-func sanitizeKey(key string) string {
-	r := strings.NewReplacer(
-		"/", "_", ":", "_", " ", "_",
-		"..", "__", "~", "_", "@", "_",
-	)
-	return r.Replace(key)
 }
