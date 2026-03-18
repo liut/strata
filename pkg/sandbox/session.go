@@ -203,7 +203,7 @@ type sessionOptions struct {
 	userID      string
 	sessionID   string
 	sessionRoot string
-	baseRootfs  string // 若为空，fallback 到宿主目录多层 lower
+	baseRootfs  string // Manager 初始化好的 base rootfs
 	driver      OverlayDriver
 	isolateNet  bool
 }
@@ -217,12 +217,10 @@ func newSession(opts sessionOptions) (*Session, error) {
 		return nil, fmt.Errorf("strata/session: mkdir home: %w", err)
 	}
 
-	// 决定 lowerdir
-	lower := hostLowerDirs()
-	if opts.baseRootfs != "" {
-		if _, err := os.Stat(opts.baseRootfs); err == nil {
-			lower = opts.baseRootfs
-		}
+	// 使用 Manager 初始化好的 base rootfs 作为 lower
+	lower := opts.baseRootfs
+	if lower == "" {
+		return nil, fmt.Errorf("baseRootfs is not initialized")
 	}
 
 	overlay := &OverlayMount{
@@ -358,38 +356,47 @@ func buildBwrapWithOverlay(mergedRoot, homeDir string, isolateNet bool) *exec.Cm
 	//       --hostname strata --die-with-parent
 	//       --setenv HOME /root --setenv USER root --setenv TERM xterm-256color --setenv PATH ...
 	//       -- bash
+	// overlay 根目录（放在最前面，后续的 ro-bind 会补充系统目录）
 	args := []string{
-		// 系统目录（需要在 pivot_root 之前绑定）
+		"--bind", mergedRoot, "/",
+	}
+
+	// 系统目录（在 merged 绑定之后，可以补充/覆盖 merged 中的目录）
+	// 只绑定实际存在的目录（如 Alpine 没有 /lib64）
+	args = append(args,
 		"--ro-bind", "/bin", "/bin",
 		"--ro-bind", "/lib", "/lib",
-		"--ro-bind", "/lib64", "/lib64",
 		"--ro-bind", "/sbin", "/sbin",
-		// overlay 根目录
-		"--bind", mergedRoot, "/",
-		// proc 和 dev
+		"--ro-bind", "/usr", "/usr",
+	)
+
+	// /lib64 可能在某些发行版不存在（如 Alpine）
+	if pathExists("/lib64") {
+		args = append(args, "--ro-bind", "/lib64", "/lib64")
+	}
+
+	// proc/dev/tmpfs/home、网络配置
+	args = append(args,
 		"--proc", "/proc", "--dev", "/dev",
-		// tmpfs
 		"--tmpfs", "/tmp", "--tmpfs", "/run",
-		// home 和网络配置
-		"--bind", homeDir, "/root",
+		"--bind", homeDir, "/root", "--chdir", "/root",
 		"--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf",
-		// namespace
+	)
+
+	// namespace、网络隔离、环境变量、命令
+	if isolateNet {
+		args = append(args, "--unshare-net")
+	}
+	args = append(args,
 		"--unshare-pid", "--unshare-ipc", "--unshare-uts",
 		"--hostname", "strata",
 		"--die-with-parent",
-		// 环境变量
 		"--setenv", "HOME", "/root",
 		"--setenv", "USER", "root",
 		"--setenv", "TERM", "xterm-256color",
 		"--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/sbin",
-		// 命令
 		"--", bash,
-	}
-
-	// 网络隔离
-	if isolateNet {
-		args = append(args, "--unshare-net")
-	}
+	)
 
 	return exec.Command("bwrap", args...)
 }
@@ -402,35 +409,39 @@ func buildBwrapFallback(homeDir string, isolateNet bool) *exec.Cmd {
 	// 注意：--ro-bind /bin /lib 等需要在 --bind 之前，这样 pivot_root 后还能访问
 	args := []string{
 		// 系统目录（这些绑定需要在 pivot_root 之前）
+		// 只绑定实际存在的目录（如 Alpine 没有 /lib64）
 		"--ro-bind", "/bin", "/bin",
 		"--ro-bind", "/lib", "/lib",
-		"--ro-bind", "/lib64", "/lib64",
 		"--ro-bind", "/sbin", "/sbin",
-		// home 目录
-		"--bind", homeDir, "/root",
-		// proc dev tmpfs
-		"--proc", "/proc",
-		"--dev", "/dev",
-		"--tmpfs", "/tmp",
-		"--tmpfs", "/run",
-		// 网络配置
+		"--ro-bind", "/usr", "/usr",
+	}
+
+	// /lib64 可能在某些发行版不存在（如 Alpine）
+	if pathExists("/lib64") {
+		args = append(args, "--ro-bind", "/lib64", "/lib64")
+	}
+
+	// home 目录、proc dev tmpfs、网络配置
+	args = append(args,
+		"--bind", homeDir, "/root", "--chdir", "/root",
+		"--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--tmpfs", "/run",
 		"--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf",
-		// namespace
+	)
+
+	// namespace、网络隔离、环境变量、命令
+	if isolateNet {
+		args = append(args, "--unshare-net")
+	}
+	args = append(args,
 		"--unshare-pid", "--unshare-ipc", "--unshare-uts",
 		"--hostname", "strata",
 		"--die-with-parent",
-		// 环境变量
 		"--setenv", "HOME", "/root",
 		"--setenv", "USER", "root",
 		"--setenv", "TERM", "xterm-256color",
 		"--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/sbin",
-		// 命令
 		"--", bash,
-	}
-
-	if isolateNet {
-		args = append(args, "--unshare-net")
-	}
+	)
 
 	return exec.Command("bwrap", args...)
 }
@@ -485,35 +496,150 @@ func buildUnshareFallback(homeDir string, isolateNet bool) *exec.Cmd {
 	return exec.Command("unshare", args...)
 }
 
-// hostLowerDirs 返回宿主机关键只读目录，用 : 分隔供 overlayfs lowerdir 使用
-// 注意：只需要 /usr 即可，因为 /bin, /lib, /sbin 都是符号链接指向 /usr
-func hostLowerDirs() string {
-	// 只用 /usr，/bin, /lib 等都是符号链接指向 /usr
-	if _, err := os.Stat("/usr"); err == nil {
-		return "/usr"
-	}
-	// fallback: 尝试其他目录
-	dirs := []string{"/bin", "/lib", "/sbin"}
-	var existing []string
-	for _, d := range dirs {
-		if _, err := os.Stat(d); err == nil {
-			existing = append(existing, d)
-		}
-	}
-	return strings.Join(existing, ":")
-}
-
 // findBash 查找 bash 的实际路径
+// 优先在系统常见路径中查找，如果都不存在则 fallback 到 sh
 func findBash() string {
 	// 常见 bash 路径，按优先级尝试
 	// 注意：在某些环境下 /usr/bin/bash 存在但 bwrap 中不可用，优先使用 /bin
-	paths := []string{"/bin/bash", "/bin/sh", "/usr/bin/bash", "/usr/bin/sh"}
+	paths := []string{"/bin/bash", "/usr/bin/bash", "/bin/sh", "/usr/bin/sh"}
 	for _, p := range paths {
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
-	return "/bin/bash" // fallback
+	// 最后 fallback 到 sh（几乎所有系统都有）
+	return "/bin/sh"
+}
+
+// pathExists 检查路径是否存在
+func pathExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
+// ensureBashInRootfs 确保 baseRootfs 中包含 /bin/bash
+func ensureBashInRootfs(baseRootfs string) error {
+	// 找到宿主机的 bash
+	bashPath := findBash()
+	if bashPath == "" {
+		return fmt.Errorf("no bash found on host")
+	}
+
+	// 检查是否已存在（避免重复复制）
+	destBash := filepath.Join(baseRootfs, "bin", "bash")
+	if _, err := os.Stat(destBash); err == nil {
+		slog.Debug("bash already exists in baseRootfs", "path", destBash)
+		return nil
+	}
+
+	// 创建目标目录
+	binDir := filepath.Join(baseRootfs, "bin")
+	if err := os.MkdirAll(binDir, 0755); err != nil {
+		return fmt.Errorf("mkdir bin dir: %w", err)
+	}
+
+	// 复制 bash
+	if err := copyFile(bashPath, destBash); err != nil {
+		return fmt.Errorf("copy bash: %w", err)
+	}
+	if err := os.Chmod(destBash, 0755); err != nil {
+		return fmt.Errorf("chmod bash: %w", err)
+	}
+
+	// 复制 bash 依赖的库（通过 ldd 获取）
+	if err := copyBashDeps(bashPath, baseRootfs); err != nil {
+		slog.Warn("failed to copy bash deps, bash may still work", "error", err)
+		return err
+	}
+
+	slog.Info("ensured bash in baseRootfs", "bash", destBash)
+	return nil
+}
+
+// copyFile 复制单个文件
+func copyFile(src, dst string) error {
+	from, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer from.Close()
+
+	to, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer to.Close()
+
+	_, err = io.Copy(to, from)
+	return err
+}
+
+// copyBashDeps 使用 ldd 找到 bash 依赖的库并复制到目标 rootfs
+func copyBashDeps(bashPath, baseRootfs string) error {
+	// 使用 ldd 获取依赖库列表
+	out, err := exec.Command("ldd", bashPath).CombinedOutput()
+	if err != nil {
+		// ldd 可能失败（比如静态链接），直接返回
+		return nil
+	}
+
+	// 解析 ldd 输出，格式如：
+	// linux-vdso.so.1 (0x00007fff...)
+	// libtinfo.so.6 => /lib/x86_64-linux-gnu/libtinfo.so.6 (0x...)
+	// libdl.so.2 => /lib64/ld-linux-x86-64.so.2 (0x...)
+	lines := strings.Split(string(out), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// 跳过 "linux-vdso.so.1" 这种虚拟库
+		if strings.Contains(line, "=>") {
+			// 提取库路径
+			parts := strings.Split(line, "=>")
+			if len(parts) < 2 {
+				continue
+			}
+			libPath := strings.TrimSpace(parts[1])
+			// 去除 "(0x...)" 部分
+			if idx := strings.Index(libPath, "("); idx > 0 {
+				libPath = strings.TrimSpace(libPath[:idx])
+			}
+
+			// 只处理绝对路径
+			if !strings.HasPrefix(libPath, "/") {
+				continue
+			}
+
+			// 复制库文件
+			if err := copyLibToRootfs(libPath, baseRootfs); err != nil {
+				slog.Debug("failed to copy lib", "lib", libPath, "error", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// copyLibToRootfs 复制库文件到 rootfs 的对应目录
+func copyLibToRootfs(libPath, baseRootfs string) error {
+	// 获取库文件名，如 /lib/x86_64-linux-gnu/libtinfo.so.6 -> /lib/x86_64-linux-gnu/
+	dir := filepath.Dir(libPath)
+	relDir, err := filepath.Rel("/", dir)
+	if err != nil {
+		return err
+	}
+
+	// 目标目录
+	targetDir := filepath.Join(baseRootfs, relDir)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", targetDir, err)
+	}
+
+	// 复制文件
+	targetPath := filepath.Join(targetDir, filepath.Base(libPath))
+	return copyFile(libPath, targetPath)
 }
 
 // sanitizeKey 将任意字符串转为安全的文件系统路径片段

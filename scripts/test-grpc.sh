@@ -5,7 +5,7 @@
 #
 # 示例:
 #   ./test-grpc-shell.sh                    # 默认 localhost:8080
-#   ./test-grpc-shell.sh 192.168.1.100:9090
+#   ./test-grpc-shell.sh 192.168.1.100:8080
 
 HOST="${1:-localhost:8080}"
 USER="testuser"

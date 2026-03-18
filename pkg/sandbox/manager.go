@@ -3,6 +3,8 @@ package sandbox
 import (
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -12,7 +14,7 @@ type Manager struct {
 	mu          sync.RWMutex
 	sessions    map[string]*Session // key: userID:sessionID
 	sessionRoot string
-	baseRootfs  string
+	baseRootfs  string // 共享的 rootfs（用户配置或自动创建，包含 bash）
 	driver      OverlayDriver
 	isolateNet  bool
 	ttl         time.Duration
@@ -29,13 +31,31 @@ type ManagerConfig struct {
 }
 
 func NewManager(cfg ManagerConfig) *Manager {
+	// 初始化 base rootfs
+	var baseRootfs string
+	if cfg.BaseRootfs != "" {
+		baseRootfs = cfg.BaseRootfs
+	} else {
+		baseRootfs = filepath.Join(cfg.SessionRoot, "rootfs")
+		if err := os.MkdirAll(baseRootfs, 0755); err != nil {
+			slog.Error("failed to create base rootfs", "path", baseRootfs, "error", err)
+		}
+	}
+
+	// 确保 base rootfs 中包含 bash
+	if err := ensureBashInRootfs(baseRootfs); err != nil {
+		slog.Error("failed to ensure bash in base rootfs", "path", baseRootfs, "error", err)
+	} else {
+		slog.Info("initialized base rootfs", "path", baseRootfs)
+	}
+
 	m := &Manager{
 		sessions:    make(map[string]*Session),
 		sessionRoot: cfg.SessionRoot,
-		baseRootfs:  cfg.BaseRootfs,
-		driver:      cfg.Driver,
-		isolateNet:  cfg.IsolateNet,
-		ttl:         cfg.TTL,
+		baseRootfs: baseRootfs,
+		driver:     cfg.Driver,
+		isolateNet: cfg.IsolateNet,
+		ttl:        cfg.TTL,
 		maxSessions: cfg.MaxSessions,
 	}
 	go m.gcLoop()
@@ -85,9 +105,9 @@ func (m *Manager) GetOrCreate(userID, sessionID string) (*Session, error) {
 		userID:      userID,
 		sessionID:   sessionID,
 		sessionRoot: m.sessionRoot,
-		baseRootfs:  m.baseRootfs,
-		driver:      m.driver,
-		isolateNet:  m.isolateNet,
+		baseRootfs: m.baseRootfs,
+		driver:     m.driver,
+		isolateNet: m.isolateNet,
 	})
 	if err != nil {
 		return nil, err

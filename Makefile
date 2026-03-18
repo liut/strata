@@ -47,7 +47,7 @@ showver:
 
 dist/linux_amd64/$(NAME): $(SOURCES) showver
 	echo "Building $(NAME) of linux/x64"
-	mkdir -p dist/linux_amd64 && GO111MODULE=$(GOMOD) GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_amd64/$(NAME) .
+	mkdir -p dist/linux_amd64 && GO111MODULE=$(GOMOD) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_amd64/$(NAME) .
 
 dist/darwin_amd64/$(NAME): $(SOURCES) showver
 	echo "Building $(NAME) of darwin/x64"

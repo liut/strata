@@ -1,0 +1,71 @@
+# =============================================================================
+# Strata Docker Compose
+# =============================================================================
+#
+# Build Steps:
+#
+# Option 1: Build everything in one command
+#   docker-compose build
+#
+# Option 2: Build binary first, then runtime image
+#   make dist/linux_amd64/strata
+#   docker build -t strata-runtime -f runtime.Dockerfile .
+#
+# Run:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f
+#
+# Stop:
+#   docker-compose down
+#
+# Notes:
+#   - Requires privileged mode for bubblewrap + fuse-overlayfs
+#   - Session data persists in named volume
+# =============================================================================
+
+services:
+  strata:
+    build:
+      context: ..
+      dockerfile: docker/runtime.Dockerfile
+    image: strata:runtime
+    container_name: strata
+    ports:
+      - "8080:8080"  # HTTP + WebSocket + gRPC (via cmux)
+    environment:
+      - STRATA_SERVER_ADDR=:8080
+      - STRATA_SANDBOX_SESSION_ROOT=/tmp/strata/sessions
+      - STRATA_SANDBOX_SESSION_TTL=30m
+      - STRATA_SANDBOX_MAX_SESSIONS=100
+      - STRATA_SANDBOX_OVERLAY_DRIVER=kernel
+      # - STRATA_SANDBOX_ISOLATE_NETWORK=true  # Optional: isolate each session network
+    volumes:
+      - strata-sessions:/tmp/strata/sessions
+    # Option A: Privileged mode (guaranteed to work)
+    privileged: true
+
+    # Option B: Alternative (may not work in all environments)
+    # cap_add:
+    #   - SYS_ADMIN
+    #   - NET_ADMIN
+    # devices:
+    #   - /dev/fuse:/dev/fuse
+    # Security options
+    security_opt:
+      - apparmor:unconfined
+    # Note: fuse operations require root, switch after mount if needed
+    # user: root
+    # Restart policy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  strata-sessions:
+    driver: local

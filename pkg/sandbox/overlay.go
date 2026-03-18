@@ -73,6 +73,7 @@ func (o *OverlayMount) mountFuse() error {
 	opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", o.Lower, o.Upper, o.Work)
 	out, err := exec.Command(bin, "-o", opts, o.Merged).CombinedOutput()
 	if err != nil {
+		slog.Error("mount fuse failed", "opts", opts, "merged", o.Merged)
 		return fmt.Errorf("strata/overlay: fuse mount failed: %w\n%s", err, out)
 	}
 	return nil

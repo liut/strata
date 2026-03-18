@@ -111,7 +111,7 @@ STRATA_SERVER_ADDR=:9000 ./strata
 Service will listen on:
 - **HTTP**: `http://localhost:8080`
 - **WebSocket**: `ws://localhost:8080/ws/shell`
-- **gRPC**: `localhost:9090`
+- **gRPC**: `localhost:8080` (via HTTP/2)
 
 ---
 

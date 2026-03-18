@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build artifacts
+# Note: dist/linux_amd64/strata is needed for runtime.Dockerfile
+dist/*
+!dist/linux_amd64/
+bin/
+strata
+strata-*
+
+# Test files
+*_test.go
+/tests/
+*.test
+
+# Documentation
+*.md
+!README.md
+
+# Config (local overrides)
+configs/config.local.yaml
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db

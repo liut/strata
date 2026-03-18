@@ -115,7 +115,7 @@ test_exec_pwd_and_ls() {
     resp_pwd=$(curl -s -X POST "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}/exec" \
         -H "Content-Type: application/json" \
         -d '{"command": "pwd"}')
-    if echo "$resp_pwd" | grep -q "tmp"; then
+    if echo "$resp_pwd" | grep -q "root"; then
         log_pass "pwd 命令成功: $resp_pwd"
     else
         log_fail "pwd 命令失败: $resp_pwd"

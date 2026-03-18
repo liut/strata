@@ -4,37 +4,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 )
-
-// TestHostLowerDirs 测试 hostLowerDirs 函数 - 环境相关
-func TestHostLowerDirs(t *testing.T) {
-	if !CurrentEnv().IsLinux {
-		t.Skip("not Linux, skipping hostLowerDirs test")
-	}
-
-	result := hostLowerDirs()
-
-	// 应该有目录
-	if result == "" {
-		t.Error("hostLowerDirs returned empty string")
-	}
-
-	// 应该用 : 分隔多个目录
-	parts := strings.Split(result, ":")
-	if len(parts) == 0 {
-		t.Error("expected at least one directory")
-	}
-
-	// 每个目录应该存在
-	for _, dir := range parts {
-		if _, err := os.Stat(dir); err != nil {
-			t.Errorf("directory %q does not exist", dir)
-		}
-	}
-}
 
 // TestBuildBwrapWithOverlay 测试 buildBwrapWithOverlay 函数 - 环境相关
 func TestBuildBwrapWithOverlay(t *testing.T) {
@@ -206,12 +178,12 @@ func TestNewSessionOptions(t *testing.T) {
 	}
 
 	opts := sessionOptions{
-		userID:      "testuser",
-		sessionID:   "testsession",
-		sessionRoot: tmpDir,
-		baseRootfs:  "",
-		driver:      DriverNone,
-		isolateNet:  false,
+		userID:       "testuser",
+		sessionID:    "testsession",
+		sessionRoot:  tmpDir,
+		baseRootfs: "",
+		driver:       DriverNone,
+		isolateNet:   false,
 	}
 
 	if opts.userID != "testuser" {
