@@ -175,7 +175,7 @@ func main() {
 		// 发送初始命令
 		_ = stream.Send(&pb.ShellInput{Payload: &pb.ShellInput_StdinData{StdinData: []byte("echo 'hello from shell stream'\n")}})
 
-		// 等待信号退出
+		// 等待信号或 context 取消退出
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
@@ -186,6 +186,9 @@ func main() {
 			select {
 			case <-sigChan:
 				fmt.Println("\nExiting...")
+				return
+			case <-ctx.Done():
+				fmt.Println("\nContext cancelled, exiting...")
 				return
 			case <-ticker.C:
 				// 这里可以添加定时命令

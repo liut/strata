@@ -18,14 +18,10 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositorie
     ca-certificates \
     curl \
     git \
-    # Common language runtimes
     python3 \
     py3-pip \
     nodejs \
     npm \
-    strace \
-    go \
-    uv \
   && rm -rf /var/cache/apk/*
 
 # Copy pre-built binary

@@ -41,13 +41,10 @@ RUN apk add --no-cache \
     ca-certificates \
     curl \
     git \
-    # Common language runtimes
     python3 \
     py3-pip \
     nodejs \
     npm \
-    go \
-    uv \
    && rm -rf /var/cache/apk/*
 
 # Copy bun from build stage

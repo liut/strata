@@ -40,24 +40,29 @@ lint:
 	golangci-lint run ./...
 
 build:
-	GO111MODULE=$(GOMOD) $(GO) build -ldflags "$(LDFLAGS)" -o $(NAME) .
+	@mkdir -p dist
+	@GO111MODULE=$(GOMOD) $(GO) build -ldflags "$(LDFLAGS)" -o dist/$(NAME) .
+	@echo "Build complete: dist/$(NAME)"
 
 showver:
 	echo "version: $(DATE)-$(TAG)"
 
 dist/linux_amd64/$(NAME): $(SOURCES) showver
-	echo "Building $(NAME) of linux/x64"
-	mkdir -p dist/linux_amd64 && GO111MODULE=$(GOMOD) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_amd64/$(NAME) .
+	@echo "Building $(NAME) of linux/x64"
+	@mkdir -p dist/linux_amd64 && GO111MODULE=$(GOMOD) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_amd64/$(NAME) .
 
 dist/darwin_amd64/$(NAME): $(SOURCES) showver
-	echo "Building $(NAME) of darwin/x64"
-	mkdir -p dist/darwin_amd64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_amd64/$(NAME) .
+	@echo "Building $(NAME) of darwin/x64"
+	@mkdir -p dist/darwin_amd64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_amd64/$(NAME) .
 
 dist/darwin_arm64/$(NAME): $(SOURCES) showver
-	echo "Building $(NAME) of darwin/arm64"
-	mkdir -p dist/darwin_arm64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_arm64/$(NAME) .
+	@echo "Building $(NAME) of darwin/arm64"
+	@mkdir -p dist/darwin_arm64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_arm64/$(NAME) .
 
 dist: vet dist/linux_amd64/$(NAME) dist/darwin_amd64/$(NAME) dist/darwin_arm64/$(NAME)
+	@echo ""
+	@echo "Build complete:"
+	@ls -la dist/
 
 package-linux: dist/linux_amd64/$(NAME)
 	echo "Packaging $(NAME)"
