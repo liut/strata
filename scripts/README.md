@@ -7,6 +7,7 @@ This directory contains utility scripts for Strata development and testing.
 | Script | Description |
 |--------|-------------|
 | `strata-mcp.ts` | MCP client for AI agents to interact with Strata via stdio |
+| `test-mcp.ts` | Test script for MCP HTTP endpoint |
 | `check-env.sh` | Verify system dependencies and kernel features |
 | `test-api.sh` | HTTP REST API test suite |
 | `test-grpc.sh` | gRPC API test script |
@@ -91,6 +92,23 @@ This directory contains utility scripts for Strata development and testing.
 
   # Run with custom Strata server
   STRATA_API=http://192.168.1.100:2280 npx tsx scripts/strata-mcp.ts
+  ```
+
+#### test-mcp.ts
+- **Purpose**: Test script for MCP HTTP endpoint
+- **Protocol**: HTTP JSON-RPC
+- **Requirements**:
+  - Bun (or Node.js with tsx)
+  - Running Strata server with MCP endpoint
+- **Environment Variables**:
+  - `STRATA_MCP` - MCP server URL (default: http://localhost:2280/mcp/)
+- **Usage**:
+  ```bash
+  # Run with default settings
+  bun run scripts/test-mcp.ts
+
+  # Run with custom MCP server
+  STRATA_MCP=http://192.168.1.100:2280/mcp/ bun run scripts/test-mcp.ts
   ```
 
 ## Configuration

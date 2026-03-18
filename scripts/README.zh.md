@@ -7,6 +7,7 @@
 | 脚本 | 说明 |
 |------|------|
 | `strata-mcp.ts` | MCP 客户端，通过 stdio 与 AI Agent 交互 |
+| `test-mcp.ts` | MCP HTTP 端点测试脚本 |
 | `check-env.sh` | 检查系统依赖和内核特性 |
 | `test-api.sh` | HTTP REST API 测试套件 |
 | `test-grpc.sh` | gRPC API 测试脚本 |
@@ -91,6 +92,23 @@
 
   # 指定自定义 Strata 服务
   STRATA_API=http://192.168.1.100:2280 npx tsx scripts/strata-mcp.ts
+  ```
+
+#### test-mcp.ts
+- **用途**：测试 MCP HTTP 端点的脚本
+- **协议**：HTTP JSON-RPC
+- **依赖**：
+  - Bun（或 Node.js + tsx）
+  - 运行中的 Strata 服务（含 MCP 端点）
+- **环境变量**：
+  - `STRATA_MCP` - MCP 服务地址（默认：http://localhost:2280/mcp/）
+- **运行方式**：
+  ```bash
+  # 默认配置运行
+  bun run scripts/test-mcp.ts
+
+  # 指定自定义 MCP 服务
+  STRATA_MCP=http://192.168.1.100:2280/mcp/ bun run scripts/test-mcp.ts
   ```
 
 ## 配置
