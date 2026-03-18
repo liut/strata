@@ -2,6 +2,8 @@
 
 > Lightweight Session Sandbox Service — Isolated Shell Environments via Namespace + Overlayfs
 
+[中文版](./README.zh.md)
+
 ## Features
 
 - **Lightweight Isolation**: Linux Namespace + bubblewrap + fuse-overlayfs, runs standalone or in Docker
@@ -27,7 +29,7 @@
 │  Isolation Layer                            │
 │  bwrap + overlayfs (fuse-overlayfs)         │
 │  ├── PID/IPC/UTS Namespace                  │
-│  ├── overlay: lower + upper + merged         │
+│  ├── overlay: lower + upper + merged        │
 │  └── PTY (pseudo-terminal)                  │
 └─────────────────────────────────────────────┘
 ```
@@ -135,15 +137,6 @@ Configuration is provided via environment variables.
 | `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | Enable network isolation per session |
 
 View all options: `./dist/strata run --help`
-
-## Optional: Build Base Image
-
-```bash
-# Export from Docker image
-./scripts/build-base.sh /opt/sandbox/base ubuntu 22.04
-```
-
-Then set `base_rootfs: /opt/sandbox/base` in config.
 
 ## Isolation Details
 

@@ -1,6 +1,8 @@
 # Strata
 
-> Lightweight Session Sandbox Service — 基于 namespace + overlayfs 的轻量隔离 Shell 环境服务
+> 轻量级会话沙箱服务 — 基于 namespace + overlayfs 的隔离 Shell 环境
+
+[English](./README.md)
 
 ## 核心特性
 
@@ -27,8 +29,8 @@
 │  Isolation Layer                            │
 │  bwrap + overlayfs (fuse-overlayfs)         │
 │  ├── PID/IPC/UTS Namespace                  │
-│  ├── overlay: lower + upper + merged         │
-│  └── PTY (pseudo-terminal)                 │
+│  ├── overlay: lower + upper + merged        │
+│  └── PTY (pseudo-terminal)                  │
 └─────────────────────────────────────────────┘
 ```
 
@@ -135,15 +137,6 @@ protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
 | `STRATA_SANDBOX_ISOLATE_NETWORK` | `false` | 启用网络隔离 |
 
 查看所有选项：`./dist/strata run --help`
-
-## 可选：制作基础镜像
-
-```bash
-# 从 Docker 镜像导出
-./scripts/build-base.sh /opt/sandbox/base ubuntu 22.04
-```
-
-然后在配置中设置 `base_rootfs: /opt/sandbox/base`
 
 ## 隔离机制详解
 
