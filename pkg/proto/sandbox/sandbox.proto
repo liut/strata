@@ -27,19 +27,19 @@ service SandboxService {
 // ─────────────────────────────────────────
 
 message CreateSessionRequest {
-  string user_id    = 1;
-  string session_id = 2;
+  string userID    = 1;
+  string sessionID = 2;
 }
 
 message CreateSessionResponse {
-  string user_id    = 1;
-  string session_id = 2;
-  string created_at = 3; // RFC3339
+  string userID    = 1;
+  string sessionID = 2;
+  string createdAt = 3; // RFC3339
 }
 
 message CloseSessionRequest {
-  string user_id    = 1;
-  string session_id = 2;
+  string userID    = 1;
+  string sessionID = 2;
 }
 
 message CloseSessionResponse {
@@ -52,10 +52,10 @@ message CloseSessionResponse {
 // ─────────────────────────────────────────
 
 message ExecRequest {
-  string user_id    = 1;
-  string session_id = 2;
-  string command    = 3;
-  int32  timeout_ms = 4; // 0 表示使用服务默认值（30s）
+  string userID    = 1;
+  string sessionID = 2;
+  string command   = 3;
+  int32  timeoutMs  = 4; // 0 表示使用服务默认值（30s）
 }
 
 message ExecResponse {
@@ -70,12 +70,12 @@ message ExecResponse {
 // ─────────────────────────────────────────
 
 message ShellInput {
-  string user_id    = 1;
-  string session_id = 2;
+  string userID    = 1;
+  string sessionID = 2;
 
   oneof payload {
-    bytes  stdin_data = 3; // 键盘输入 / 命令文本
-    Resize resize     = 4; // 终端尺寸变更
+    bytes  stdinData = 3; // 键盘输入 / 命令文本
+    Resize resize    = 4; // 终端尺寸变更
   }
 }
 
@@ -97,6 +97,6 @@ message Resize {
 message StatsRequest {}
 
 message StatsResponse {
-  int32 active_sessions = 1;
-  int32 max_sessions    = 2;
+  int32 activeSessions = 1;
+  int32 maxSessions    = 2;
 }
