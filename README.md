@@ -170,7 +170,7 @@ Close → PTY close → overlay unmount → delete upper
 - Linux kernel ≥ 5.11 (recommended)
 - bwrap (bubblewrap)
 - fuse-overlayfs
-- Go ≥ 1.23
+- Go ≥ 1.25 (build only)
 
 ## License
 

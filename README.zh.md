@@ -170,7 +170,7 @@ Docker 的"重"在于：
 - Linux kernel ≥ 5.11（推荐）
 - bwrap (bubblewrap)
 - fuse-overlayfs
-- Go ≥ 1.23
+- Go ≥ 1.25 (build only)
 
 ## License
 
