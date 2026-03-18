@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Strata MCP Client
+ * Strata API wrap as a StdIO MCP Server
  *
  * Provides sandboxed shell operations for AI Agents via MCP protocol.
  * Communicates with Strata server over HTTP.
