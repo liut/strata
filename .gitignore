@@ -38,3 +38,4 @@ go.sum
 node_modules/
 *.log
 *.local.*
+/tests/
