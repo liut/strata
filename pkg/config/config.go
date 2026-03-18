@@ -17,7 +17,7 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Addr      string `envconfig:"ADDR" default:":8080" desc:"HTTP/WS listen address"`
+	Addr      string `envconfig:"ADDR" default:":2280" desc:"HTTP/WS listen address"`
 	AccessLog string `envconfig:"ACCESS_LOG" desc:"Access log file path, empty for stdout"`
 }
 
@@ -59,7 +59,7 @@ func Load() (*Config, error) {
 func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Addr:      ":8080",
+			Addr:      ":2280",
 			AccessLog: "",
 		},
 		Sandbox: SandboxConfig{

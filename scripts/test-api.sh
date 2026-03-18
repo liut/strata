@@ -9,7 +9,7 @@ set -o pipefail
 
 # 默认配置
 HOST="${STRATA_HOST:-localhost}"
-PORT="${STRATA_PORT:-8080}"
+PORT="${STRATA_PORT:-2280}"
 BASE_URL="http://${HOST}:${PORT}"
 WS_URL="ws://${HOST}:${PORT}"
 TIMEOUT=5

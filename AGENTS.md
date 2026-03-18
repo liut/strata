@@ -86,7 +86,7 @@ Configuration is provided via environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS listen address |
+| `STRATA_SERVER_ADDR` | `:2280` | HTTP/WS listen address |
 | `STRATA_SANDBOX_BASE_ROOTFS` | - | Base read-only rootfs (optional) |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session working directory |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | Inactive session timeout |
@@ -109,9 +109,9 @@ STRATA_SERVER_ADDR=:9000 ./strata
 ```
 
 Service will listen on:
-- **HTTP**: `http://localhost:8080`
-- **WebSocket**: `ws://localhost:8080/ws/shell`
-- **gRPC**: `localhost:8080` (via HTTP/2)
+- **HTTP**: `http://localhost:2280`
+- **WebSocket**: `ws://localhost:2280/ws/shell`
+- **gRPC**: `localhost:2280` (via HTTP/2)
 
 ---
 
@@ -121,14 +121,14 @@ Service will listen on:
 
 #### Create Session
 ```bash
-curl -X POST http://localhost:8080/api/sessions \
+curl -X POST http://localhost:2280/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"user_id": "alice", "session_id": "task-001"}'
 ```
 
 #### Execute Command
 ```bash
-curl -X POST http://localhost:8080/api/sessions/alice/task-001/exec \
+curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
   -H "Content-Type: application/json" \
   -d '{
     "command": "ls -la /root",
@@ -138,19 +138,19 @@ curl -X POST http://localhost:8080/api/sessions/alice/task-001/exec \
 
 #### Close Session
 ```bash
-curl -X DELETE http://localhost:8080/api/sessions/alice/task-001
+curl -X DELETE http://localhost:2280/api/sessions/alice/task-001
 ```
 
 #### Get Stats
 ```bash
-curl http://localhost:8080/api/stats
+curl http://localhost:2280/api/stats
 ```
 
 ---
 
 ### WebSocket (Interactive Shell)
 
-**Endpoint**: `ws://localhost:8080/api/ws/alice/task-001/shell`
+**Endpoint**: `ws://localhost:2280/api/ws/alice/task-001/shell`
 
 **Client → Server**:
 ```json
@@ -193,7 +193,7 @@ For AI agents (Claude, GPT, etc.), use the MCP server:
 
 ```bash
 # Set API endpoint
-export STRATA_API=http://localhost:8080
+export STRATA_API=http://localhost:2280
 
 # Run MCP server
 npx tsx mcp/src/server.ts

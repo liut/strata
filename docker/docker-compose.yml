@@ -33,9 +33,9 @@ services:
     image: strata:runtime
     container_name: strata
     ports:
-      - "8080:8080"  # HTTP + WebSocket + gRPC (via cmux)
+      - "2280:2280"  # HTTP + WebSocket + gRPC (via cmux)
     environment:
-      - STRATA_SERVER_ADDR=:8080
+      - STRATA_SERVER_ADDR=:2280
       - STRATA_SANDBOX_SESSION_ROOT=/tmp/strata/sessions
       - STRATA_SANDBOX_SESSION_TTL=30m
       - STRATA_SANDBOX_MAX_SESSIONS=100
@@ -60,7 +60,7 @@ services:
     # Restart policy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/api/stats"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2280/api/stats"]
       interval: 30s
       timeout: 10s
       retries: 3

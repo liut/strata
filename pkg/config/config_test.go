@@ -10,8 +10,8 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	cfg := defaultConfig()
 
-	if cfg.Server.Addr != ":8080" {
-		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":8080")
+	if cfg.Server.Addr != ":2280" {
+		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":2280")
 	}
 	if cfg.Sandbox.SessionRoot != "/tmp/strata/sessions" {
 		t.Errorf("SessionRoot = %q, want %q", cfg.Sandbox.SessionRoot, "/tmp/strata/sessions")
@@ -80,8 +80,8 @@ func TestLoadDefaults(t *testing.T) {
 	}
 
 	// 验证默认值
-	if cfg.Server.Addr != ":8080" {
-		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":8080")
+	if cfg.Server.Addr != ":2280" {
+		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":2280")
 	}
 	if cfg.Sandbox.SessionRoot != "/tmp/strata/sessions" {
 		t.Errorf("SessionRoot = %q, want %q", cfg.Sandbox.SessionRoot, "/tmp/strata/sessions")
@@ -101,7 +101,7 @@ func TestLoadDefaults(t *testing.T) {
 func TestConfigStructs(t *testing.T) {
 	cfg := &Config{
 		Server: ServerConfig{
-			Addr: ":8080",
+			Addr: ":2280",
 		},
 		Sandbox: SandboxConfig{
 			BaseRootfs:     "/base",
@@ -113,7 +113,7 @@ func TestConfigStructs(t *testing.T) {
 		},
 	}
 
-	if cfg.Server.Addr != ":8080" {
+	if cfg.Server.Addr != ":2280" {
 		t.Errorf("Server.Addr = %q", cfg.Server.Addr)
 	}
 	if cfg.Sandbox.BaseRootfs != "/base" {

@@ -66,17 +66,17 @@ STRATA_SERVER_ADDR=:9000 ./strata
 
 ```bash
 # Create session
-curl -X POST http://localhost:8080/api/sessions \
+curl -X POST http://localhost:2280/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"user_id": "alice", "session_id": "task-001"}'
 
 # Execute command
-curl -X POST http://localhost:8080/api/sessions/alice/task-001/exec \
+curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
   -H "Content-Type: application/json" \
   -d '{"command": "ls -la"}'
 
 # Interactive Shell (WebSocket)
-wscat -c 'ws://localhost:8080/api/ws/alice/task-001/shell'
+wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
 # Input: {"type": "input", "data": "ls -la\n"}
 ```
 
@@ -86,7 +86,7 @@ When the service is running, MCP is available at the `/mcp/` endpoint on the sam
 
 ```bash
 # MCP endpoint
-http://localhost:8080/mcp/
+http://localhost:2280/mcp/
 ```
 
 ## API Reference
@@ -130,7 +130,7 @@ Configuration is provided via environment variables.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS listen address |
+| `STRATA_SERVER_ADDR` | `:2280` | HTTP/WS listen address |
 | `STRATA_SANDBOX_BASE_ROOTFS` | - | Base read-only rootfs (optional) |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session working directory |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | Inactive session timeout |

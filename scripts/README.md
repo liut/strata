@@ -44,10 +44,10 @@ This directory contains utility scripts for Strata development and testing.
   - Optional: `websocat` or `wscat` for WebSocket testing
 - **Environment Variables**:
   - `STRATA_HOST` - Server host (default: localhost)
-  - `STRATA_PORT` - Server port (default: 8080)
+  - `STRATA_PORT` - Server port (default: 2280)
 - **Usage**:
   ```bash
-  # Test against default localhost:8080
+  # Test against default localhost:2280
   ./scripts/test-api.sh
 
   # Test against custom host/port
@@ -61,11 +61,11 @@ This directory contains utility scripts for Strata development and testing.
   - Running Strata server
 - **Usage**:
   ```bash
-  # Test against default localhost:8080
+  # Test against default localhost:2280
   ./scripts/test-grpc.sh
 
   # Test against custom host:port
-  ./scripts/test-grpc.sh 192.168.1.100:8080
+  ./scripts/test-grpc.sh 192.168.1.100:2280
   ```
 
 #### strata-mcp.ts
@@ -76,7 +76,7 @@ This directory contains utility scripts for Strata development and testing.
   - `@modelcontextprotocol/sdk` package
   - Running Strata server
 - **Environment Variables**:
-  - `STRATA_API` - Strata server URL (default: http://localhost:8080)
+  - `STRATA_API` - Strata server URL (default: http://localhost:2280)
   - `STRATA_UID` - Default user ID (optional, makes user_id param optional)
 - **Usage**:
   ```bash
@@ -90,7 +90,7 @@ This directory contains utility scripts for Strata development and testing.
   STRATA_UID=alice npx tsx scripts/strata-mcp.ts
 
   # Run with custom Strata server
-  STRATA_API=http://192.168.1.100:8080 npx tsx scripts/strata-mcp.ts
+  STRATA_API=http://192.168.1.100:2280 npx tsx scripts/strata-mcp.ts
   ```
 
 ## Configuration

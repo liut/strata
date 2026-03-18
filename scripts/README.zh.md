@@ -44,10 +44,10 @@
   - 可选：`websocat` 或 `wscat`（用于 WebSocket 测试）
 - **环境变量**：
   - `STRATA_HOST` - 服务主机（默认：localhost）
-  - `STRATA_PORT` - 服务端口（默认：8080）
+  - `STRATA_PORT` - 服务端口（默认：2280）
 - **运行方式**：
   ```bash
-  # 测试默认 localhost:8080
+  # 测试默认 localhost:2280
   ./scripts/test-api.sh
 
   # 指定主机和端口
@@ -61,11 +61,11 @@
   - 运行中的 Strata 服务
 - **运行方式**：
   ```bash
-  # 测试默认 localhost:8080
+  # 测试默认 localhost:2280
   ./scripts/test-grpc.sh
 
   # 指定主机:端口
-  ./scripts/test-grpc.sh 192.168.1.100:8080
+  ./scripts/test-grpc.sh 192.168.1.100:2280
   ```
 
 #### strata-mcp.ts
@@ -76,7 +76,7 @@
   - `@modelcontextprotocol/sdk` 包
   - 运行中的 Strata 服务
 - **环境变量**：
-  - `STRATA_API` - Strata 服务地址（默认：http://localhost:8080）
+  - `STRATA_API` - Strata 服务地址（默认：http://localhost:2280）
   - `STRATA_UID` - 默认用户 ID（可选，设置后 user_id 参数变为可选）
 - **运行方式**：
   ```bash
@@ -90,7 +90,7 @@
   STRATA_UID=alice npx tsx scripts/strata-mcp.ts
 
   # 指定自定义 Strata 服务
-  STRATA_API=http://192.168.1.100:8080 npx tsx scripts/strata-mcp.ts
+  STRATA_API=http://192.168.1.100:2280 npx tsx scripts/strata-mcp.ts
   ```
 
 ## 配置

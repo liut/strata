@@ -73,7 +73,7 @@ func runAll(cmd *cobra.Command, args []string) error {
 	// 启动服务
 	addr := cfg.Server.Addr
 	if addr == "" {
-		addr = ":8080"
+		addr = ":2280"
 	}
 	return serveAll(addr, manager)
 }

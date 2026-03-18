@@ -4,10 +4,10 @@
 # 用法: ./test-grpc-shell.sh [host:port]
 #
 # 示例:
-#   ./test-grpc-shell.sh                    # 默认 localhost:8080
-#   ./test-grpc-shell.sh 192.168.1.100:8080
+#   ./test-grpc-shell.sh                    # 默认 localhost:2280
+#   ./test-grpc-shell.sh 192.168.1.100:2280
 
-HOST="${1:-localhost:8080}"
+HOST="${1:-localhost:2280}"
 USER="testuser"
 SESSION="shell-test-$$"
 

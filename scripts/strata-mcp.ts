@@ -7,7 +7,7 @@
  * Communicates with Strata server over HTTP.
  *
  * Environment Variables:
- *   STRATA_API    Strata server URL (default: http://localhost:8080)
+ *   STRATA_API    Strata server URL (default: http://localhost:2280)
  *   STRATA_UID    Default user ID (if set, user_id param becomes optional)
  *
  * Usage:
@@ -26,7 +26,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const API_BASE = process.env.STRATA_API || "http://localhost:8080";
+const API_BASE = process.env.STRATA_API || "http://localhost:2280";
 const STRATA_UID = process.env.STRATA_UID?.trim() || "";
 
 interface Session {

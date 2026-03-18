@@ -66,17 +66,17 @@ STRATA_SERVER_ADDR=:9000 ./strata
 
 ```bash
 # 创建会话
-curl -X POST http://localhost:8080/api/sessions \
+curl -X POST http://localhost:2280/api/sessions \
   -H "Content-Type: application/json" \
   -d '{"user_id": "alice", "session_id": "task-001"}'
 
 # 执行命令
-curl -X POST http://localhost:8080/api/exec \
+curl -X POST http://localhost:2280/api/exec \
   -H "Content-Type: application/json" \
   -d '{"user_id": "alice", "session_id": "task-001", "command": "ls -la"}'
 
 # 交互式 Shell（WebSocket）
-wscat -c 'ws://localhost:8080/api/ws/alice/task-001/shell'
+wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
 # 输入: {"type": "input", "data": "ls -la\n"}
 ```
 
@@ -86,7 +86,7 @@ wscat -c 'ws://localhost:8080/api/ws/alice/task-001/shell'
 
 ```bash
 # MCP 端点
-http://localhost:8080/mcp/
+http://localhost:2280/mcp/
 ```
 
 ## API 参考
@@ -130,7 +130,7 @@ protoc --go_out=. --go-grpc_out=. proto/sandbox/*.proto
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `STRATA_SERVER_ADDR` | `:8080` | HTTP/WS 监听地址 |
+| `STRATA_SERVER_ADDR` | `:2280` | HTTP/WS 监听地址 |
 | `STRATA_SANDBOX_BASE_ROOTFS` | - | 基础只读根（可选） |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session 工作目录 |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | 不活跃 Session 超时 |

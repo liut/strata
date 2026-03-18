@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	addr   = flag.String("addr", "localhost:8080", "server address")
+	addr   = flag.String("addr", "localhost:2280", "server address")
 	userID = flag.String("user", "testuser", "user id")
 	sessID = flag.String("session", "", "session id")
 )
