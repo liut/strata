@@ -32,7 +32,6 @@ configs/config.local.yaml
 
 # Go
 vendor/
-go.sum
 
 # Node
 node_modules/
