@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          install-mode: "goinstall"
+          version: v1.64
+
+  build:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Get version
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == v* ]]; then
+            VERSION="$TAG"
+          else
+            VERSION="$(git rev-parse --short HEAD)"
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build Linux
+        env:
+          CGO_ENABLED: 0
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: |
+          echo "version: $VERSION"
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/liut/strata/pkg/config.Version=$VERSION -s -w" -o strata-linux-amd64 .
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X github.com/liut/strata/pkg/config.Version=$VERSION -s -w" -o strata-linux-arm64 .
+
+      - name: Package
+        run: |
+          tar -cvJf strata-linux-amd64-${{ steps.version.outputs.VERSION }}.tar.xz -C . strata-linux-amd64
+          tar -cvJf strata-linux-arm64-${{ steps.version.outputs.VERSION }}.tar.xz -C . strata-linux-arm64
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            strata-linux-amd64-*.tar.xz
+            strata-linux-arm64-*.tar.xz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
