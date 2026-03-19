@@ -45,9 +45,9 @@ func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) 
 			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
 		}
 		h.sessions[key] = &SessionInfo{
-			UserID:    sess.GetUID(),
-			SessionID: sess.GetID(),
-			CreatedAt: sess.Created.Format("2006-01-02T15:04:05Z07:00"),
+			UserID:    sess.UID(),
+			SessionID: sess.ID(),
+			CreatedAt: sess.Created().Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 

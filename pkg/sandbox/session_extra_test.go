@@ -105,11 +105,11 @@ func TestSessionRead(t *testing.T) {
 	// 创建一个带 ptmx 的 Session 用于测试
 	// 注意：这里只测试结构，不实际读取
 	s := &Session{
-		LastUse: time.Now(),
+		lastHit: time.Now(),
 	}
 
-	if s.LastUse.IsZero() {
-		t.Error("expected LastUse to be set")
+	if s.LastHit().IsZero() {
+		t.Error("expected LastHit to be set")
 	}
 }
 

@@ -47,9 +47,9 @@ func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request
 	}
 
 	jsonOK(w, map[string]string{
-		"user_id":    s.GetUID(),
-		"session_id": s.GetID(),
-		"created_at": s.Created.Format("2006-01-02T15:04:05Z07:00"),
+		"user_id":    s.UID(),
+		"session_id": s.ID(),
+		"created_at": s.Created().Format("2006-01-02T15:04:05Z07:00"),
 	})
 }
 

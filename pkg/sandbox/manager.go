@@ -117,7 +117,7 @@ func (m *Manager) GetOrCreate(userID, sessionID string) (*Session, error) {
 
 	// 自动从 map 中移除已关闭的 session
 	go func() {
-		<-s.Done
+		<-s.Done()
 		m.mu.Lock()
 		if cur, ok := m.sessions[key]; ok && cur == s {
 			delete(m.sessions, key)
@@ -182,10 +182,10 @@ func (m *Manager) gcLoop() {
 		now := time.Now()
 		for key, s := range m.sessions {
 			// 清理条件：超过 TTL 不活跃，或者 bwrap 已退出且超过 5 分钟
-			shouldClose := now.Sub(s.LastUse) > m.ttl
+			shouldClose := now.Sub(s.LastHit()) > m.ttl
 			if !shouldClose && !s.IsBwrapAlive() {
 				// bwrap 已退出，额外等待 5 分钟后清理
-				shouldClose = now.Sub(s.LastUse) > 5*time.Minute
+				shouldClose = now.Sub(s.LastHit()) > 5*time.Minute
 			}
 			if shouldClose {
 				delete(m.sessions, key)

@@ -23,10 +23,10 @@ var keyReplacer = strings.NewReplacer(
 
 // Session 表示一个用户隔离的 Shell 会话
 type Session struct {
-	id      string
-	userID  string
-	Created time.Time
-	LastUse time.Time
+	id       string
+	owner    string
+	created  time.Time
+	lastHit  time.Time
 
 	overlay *OverlayMount
 	ptmx    *os.File  // PTY 主端（服务侧）
@@ -39,17 +39,32 @@ type Session struct {
 
 	mu     sync.Mutex
 	closed bool
-	Done   chan struct{} // 关闭时关闭此 channel
+	done   chan struct{} // 关闭时关闭此 channel
 }
 
-// GetID 返回 session ID
-func (s *Session) GetID() string {
+// ID 返回 session ID
+func (s *Session) ID() string {
 	return s.id
 }
 
-// GetUID 返回 user ID
-func (s *Session) GetUID() string {
-	return s.userID
+// UID 返回 owner ID
+func (s *Session) UID() string {
+	return s.owner
+}
+
+// Created 返回会话创建时间
+func (s *Session) Created() time.Time {
+	return s.created
+}
+
+// LastHit 返回最后活动时间
+func (s *Session) LastHit() time.Time {
+	return s.lastHit
+}
+
+// Done 返回一个 channel，会话关闭时关闭
+func (s *Session) Done() <-chan struct{} {
+	return s.done
 }
 
 // Write 向 Shell 写入输入数据（用户键盘/指令）
@@ -59,7 +74,7 @@ func (s *Session) Write(data []byte) (int, error) {
 	if s.closed {
 		return 0, io.ErrClosedPipe
 	}
-	s.LastUse = time.Now()
+	s.lastHit = time.Now()
 	return s.ptmx.Write(data)
 }
 
@@ -68,7 +83,7 @@ func (s *Session) Read(buf []byte) (int, error) {
 	n, err := s.ptmx.Read(buf)
 	if n > 0 {
 		s.mu.Lock()
-		s.LastUse = time.Now()
+		s.lastHit = time.Now()
 		s.mu.Unlock()
 	}
 	return n, err
@@ -101,7 +116,7 @@ func (s *Session) Close() {
 			_ = s.overlay.Cleanup()
 		}()
 	}
-	close(s.Done)
+	close(s.done)
 }
 
 // IsClosed 返回 session 是否已关闭
@@ -149,7 +164,7 @@ func (s *Session) RestartBwrap() error {
 
 	// 重新创建 bwrap 命令
 	var cmd *exec.Cmd
-	homeDir := filepath.Join(s.sessionRoot, s.userID, s.id, "home")
+	homeDir := filepath.Join(s.sessionRoot, s.owner, s.id, "home")
 
 	if s.overlay.active && s.overlay.Merged != "" {
 		cmd = buildBwrapWithOverlay(s.overlay.Merged, homeDir, s.isolateNet)
@@ -177,7 +192,7 @@ func (s *Session) RestartBwrap() error {
 	// 更新 session
 	s.ptmx = ptmx
 	s.cmd = cmd
-	s.LastUse = time.Now()
+	s.lastHit = time.Now()
 
 	// 启动新的 waitExit goroutine
 	go s.waitExit()
@@ -344,16 +359,16 @@ func newSession(opts sessionOptions) (*Session, error) {
 
 	s := &Session{
 		id:          opts.sessionID,
-		userID:      opts.userID,
-		Created:     time.Now(),
-		LastUse:     time.Now(),
+		owner:       opts.userID,
+		created:     time.Now(),
+		lastHit:     time.Now(),
 		overlay:     overlay,
 		ptmx:        ptmx,
 		cmd:         cmd,
 		sessionRoot: opts.sessionRoot,
 		driver:      opts.driver,
 		isolateNet:  opts.isolateNet,
-		Done:        make(chan struct{}),
+		done:        make(chan struct{}),
 	}
 
 	go s.waitExit()
