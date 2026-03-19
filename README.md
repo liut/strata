@@ -29,7 +29,7 @@
 │  Isolation Layer                            │
 │  bwrap + overlayfs (fuse-overlayfs)         │
 │  ├── PID/IPC/UTS Namespace                  │
-│  ├── overlay: lower + upper + merged         │
+│  ├── overlay: lower + upper + merged        │
 │  └── PTY (pseudo-terminal)                  │
 └─────────────────────────────────────────────┘
 ```
