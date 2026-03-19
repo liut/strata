@@ -9,7 +9,12 @@ import (
 
 // Handler 接口用于注册路由
 type Handler interface {
-	Register(*http.ServeMux)
+	http.Handler
+	HandleFunc(string, func(http.ResponseWriter, *http.Request))
+}
+
+type Router interface {
+	Route(Handler)
 }
 
 // handlerImpl 持有所有 HTTP 路由依赖
@@ -17,11 +22,11 @@ type handlerImpl struct {
 	manager *sandbox.Manager
 }
 
-func NewHandler(m *sandbox.Manager) Handler {
+func NewHandler(m *sandbox.Manager) Router {
 	return &handlerImpl{manager: m}
 }
 
-func (h *handlerImpl) Register(mux *http.ServeMux) {
+func (h *handlerImpl) Route(mux Handler) {
 	mux.HandleFunc("POST /api/sessions", h.handleCreateSession)
 	mux.HandleFunc("DELETE /api/sessions/{uid}/{sid}", h.handleCloseSession)
 	mux.HandleFunc("POST /api/sessions/{uid}/{sid}/exec", h.handleExec)

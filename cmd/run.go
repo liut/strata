@@ -91,7 +91,7 @@ func serveAll(addr string, manager *sandbox.Manager) error {
 	// HTTP 服务
 	httpMux := http.NewServeMux()
 	handler := webapi.NewHandler(manager)
-	handler.Register(httpMux)
+	handler.Route(httpMux)
 
 	// MCP 服务
 	mcpServer := server.NewMCPServer("strata", version)
