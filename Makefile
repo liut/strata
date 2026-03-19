@@ -11,7 +11,7 @@ GOMOD:=$(shell echo "$${GO111MODULE:-auto}")
 # VERSION can be overridden: make dist VERSION=v1.2.3
 VERSION?=$(DATE)-$(TAG)
 
-LDFLAGS:=-X $(ROOF)/cmd.version=$(VERSION)
+LDFLAGS:=-X $(ROOF)/pkg/config.Version=$(VERSION)
 
 help:
 	@echo "Usage:"

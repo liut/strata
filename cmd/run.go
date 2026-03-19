@@ -16,7 +16,6 @@ import (
 	"github.com/liut/strata/pkg/rpc"
 	"github.com/liut/strata/pkg/sandbox"
 	"github.com/liut/strata/pkg/webapi"
-	"github.com/mark3labs/mcp-go/server"
 	"github.com/soheilhy/cmux"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -38,9 +37,8 @@ func runAll(cmd *cobra.Command, args []string) error {
 
 	// 设置全局配置
 	config.Current = cfg
-	cfg.Version = version
 
-	slog.Info("starting strata", "version", version)
+	slog.Info("starting strata", "version", config.Version)
 	slog.Info("lightweight session sandbox service")
 
 	// 检查运行环境依赖
@@ -94,11 +92,8 @@ func serveAll(addr string, manager *sandbox.Manager) error {
 	handler.Route(httpMux)
 
 	// MCP 服务
-	mcpServer := server.NewMCPServer("strata", version)
-	mcpHandler := mcp.NewHandler(manager)
-	mcp.SetupTools(mcpServer, mcpHandler)
-	streamableHTTPServer := server.NewStreamableHTTPServer(mcpServer)
-	httpMux.Handle("/mcp/", streamableHTTPServer)
+	mcpHandler := mcp.NewHandler(manager, config.Current.Name, config.Version)
+	mcpHandler.Route(httpMux)
 
 	httpServer := &http.Server{Handler: loggingMiddleware(httpMux, slog.Default())}
 

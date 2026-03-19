@@ -8,7 +8,10 @@ import (
 
 // TestDefaultConfig 测试默认配置
 func TestDefaultConfig(t *testing.T) {
-	cfg := defaultConfig()
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
 
 	if cfg.Server.Addr != ":2280" {
 		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":2280")

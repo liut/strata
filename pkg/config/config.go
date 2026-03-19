@@ -9,8 +9,7 @@ import (
 
 // Config 应用配置
 type Config struct {
-	Name    string `ignored:"true"`
-	Version string `ignored:"true"`
+	Name string `ignored:"true" default:"strata"`
 
 	Server  ServerConfig  `envconfig:"SERVER"`
 	Sandbox SandboxConfig `envconfig:"SANDBOX"`
@@ -42,11 +41,14 @@ type SandboxConfig struct {
 var (
 	// Current 当前配置
 	Current = new(Config)
+
+	// Version 应用版本，由 build 时注入
+	Version = "dev"
 )
 
 // Load 从环境变量加载配置
 func Load() (*Config, error) {
-	cfg := defaultConfig()
+	cfg := new(Config)
 
 	// 从环境变量加载
 	if err := envconfig.Process("strata", cfg); err != nil {
@@ -56,25 +58,8 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-func defaultConfig() *Config {
-	return &Config{
-		Server: ServerConfig{
-			Addr:      ":2280",
-			AccessLog: "",
-		},
-		Sandbox: SandboxConfig{
-			BaseRootfs:     "",
-			SessionRoot:    "/tmp/strata/sessions",
-			SessionTTL:     30 * time.Minute,
-			MaxSessions:    100,
-			IsolateNetwork: false,
-			OverlayDriver:  "fuse",
-		},
-	}
-}
-
 // Usage 打印配置帮助信息
 func Usage() error {
-	log.Printf("ver: %s", Current.Version)
+	log.Printf("ver: %s", Version)
 	return envconfig.Usage("strata", Current)
 }

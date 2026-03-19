@@ -10,7 +10,7 @@ import (
 // Handler 接口用于注册路由
 type Handler interface {
 	http.Handler
-	HandleFunc(string, func(http.ResponseWriter, *http.Request))
+	Handle(string, http.Handler)
 }
 
 type Router interface {
@@ -27,11 +27,11 @@ func NewHandler(m *sandbox.Manager) Router {
 }
 
 func (h *handlerImpl) Route(mux Handler) {
-	mux.HandleFunc("POST /api/sessions", h.handleCreateSession)
-	mux.HandleFunc("DELETE /api/sessions/{uid}/{sid}", h.handleCloseSession)
-	mux.HandleFunc("POST /api/sessions/{uid}/{sid}/exec", h.handleExec)
-	mux.HandleFunc("GET /api/stats", h.handleStats)
-	mux.HandleFunc("GET /api/ws/{uid}/{sid}/shell", h.handleShellWS)
+	mux.Handle("POST /api/sessions", http.HandlerFunc(h.handleCreateSession))
+	mux.Handle("DELETE /api/sessions/{uid}/{sid}", http.HandlerFunc(h.handleCloseSession))
+	mux.Handle("POST /api/sessions/{uid}/{sid}/exec", http.HandlerFunc(h.handleExec))
+	mux.Handle("GET /api/stats", http.HandlerFunc(h.handleStats))
+	mux.Handle("GET /api/ws/{uid}/{sid}/shell", http.HandlerFunc(h.handleShellWS))
 }
 
 // handleCreateSession 创建或复用 session

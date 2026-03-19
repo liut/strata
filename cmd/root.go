@@ -5,10 +5,9 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/liut/strata/pkg/config"
 	"github.com/spf13/cobra"
 )
-
-var version = "dev"
 var logLevel string
 
 // initSlog 配置 slog 输出格式，包含文件名和行号
@@ -39,7 +38,6 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() {
-	RootCmd.Version = version
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -47,6 +45,8 @@ func Execute() {
 }
 
 func init() {
+	RootCmd.Version = config.Version
+
 	RootCmd.AddCommand(runCmd)
 
 	RootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "log level: debug, info, warn, error")

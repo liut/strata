@@ -8,12 +8,19 @@ import (
 	"github.com/liut/strata/pkg/sandbox"
 	"github.com/liut/strata/pkg/webapi"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 )
+
+// Router 注册 MCP 路由
+type Router interface {
+	Route(mux webapi.Handler)
+}
 
 // Handler 处理 MCP 工具调用
 type Handler struct {
 	manager  *sandbox.Manager
 	sessions map[string]*SessionInfo
+	mcps     *server.MCPServer
 }
 
 // SessionInfo MCP 缓存的 session 信息
@@ -23,11 +30,22 @@ type SessionInfo struct {
 	CreatedAt string
 }
 
-func NewHandler(manager *sandbox.Manager) *Handler {
-	return &Handler{
+func NewHandler(manager *sandbox.Manager, name, version string) *Handler {
+	mcpsvr := server.NewMCPServer(name, version)
+	h := &Handler{
 		manager:  manager,
 		sessions: make(map[string]*SessionInfo),
+		mcps:     mcpsvr,
 	}
+	SetupTools(mcpsvr, h)
+	return h
+}
+
+var _ Router = (*Handler)(nil)
+
+// Route 注册 MCP 路由
+func (h *Handler) Route(mux webapi.Handler) {
+	mux.Handle("/mcp/", server.NewStreamableHTTPServer(h.mcps))
 }
 
 func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
