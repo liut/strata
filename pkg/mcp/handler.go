@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	HeaderUserID    = "X-User-Id"
+	// HeaderOwnerID is the HTTP header for owner identity.
+	HeaderOwnerID   = "X-Owner-Id"
+	// HeaderSessionID is the HTTP header for session identity.
 	HeaderSessionID = "X-Session-Id"
 )
 
@@ -31,11 +33,12 @@ type Handler struct {
 
 // SessionInfo MCP 缓存的 session 信息
 type SessionInfo struct {
-	UserID    string
+	OwnerID   string
 	SessionID string
 	CreatedAt string
 }
 
+// NewHandler creates a new MCP handler.
 func NewHandler(manager *sandbox.Manager, name, version string) *Handler {
 	mcpsvr := server.NewMCPServer(name, version)
 	h := &Handler{
@@ -58,7 +61,7 @@ func (h *Handler) Route(mux webapi.Handler) {
 
 func builtContextFromRequest(ctx context.Context, r *http.Request) context.Context {
 	return ContextWithScarf(ctx, Scarf{
-		UserID:    r.Header.Get(HeaderUserID),
+		OwnerID:   r.Header.Get(HeaderOwnerID),
 		SessionID: r.Header.Get(HeaderSessionID),
 	})
 }
@@ -71,19 +74,19 @@ func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) 
 
 	key := sc.GetKey()
 	if _, exists := h.sessions[key]; !exists {
-		sess, err := h.manager.GetOrCreate(sc.UserID, sc.SessionID)
+		sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 		if err != nil {
 			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
 		}
 		h.sessions[key] = &SessionInfo{
-			UserID:    sess.UID(),
+			OwnerID:   sess.UID(),
 			SessionID: sess.ID(),
 			CreatedAt: sess.Created().Format("2006-01-02T15:04:05Z07:00"),
 		}
 	}
 
 	sm := h.sessions[key]
-	return mcp.NewToolResultText(fmt.Sprintf("Session: %s/%s", sm.UserID, sm.SessionID)), nil
+	return mcp.NewToolResultText(fmt.Sprintf("Session: %s/%s", sm.OwnerID, sm.SessionID)), nil
 }
 
 func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
@@ -101,7 +104,7 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 	// 确保 session 存在
 	key := sc.GetKey()
 	if _, exists := h.sessions[key]; !exists {
-		_, err := h.manager.GetOrCreate(sc.UserID, sc.SessionID)
+		_, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 		if err != nil {
 			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
 		}
@@ -112,7 +115,7 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		timeout = int(timeoutMs)
 	}
 
-	sess, ok := h.manager.Get(sc.UserID, sc.SessionID)
+	sess, ok := h.manager.Get(sc.OwnerID, sc.SessionID)
 	if !ok {
 		return mcp.NewToolResultError("session not found"), nil
 	}
@@ -142,7 +145,7 @@ func (h *Handler) handleWriteFile(ctx context.Context, args map[string]any) (*mc
 
 	cmd := fmt.Sprintf("cat > '%s' << 'STRATA_EOF'\n%s\nSTRATA_EOF", path, content)
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    sc.UserID,
+		"user_id":    sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    cmd,
 	})
@@ -160,7 +163,7 @@ func (h *Handler) handleReadFile(ctx context.Context, args map[string]any) (*mcp
 	}
 
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    sc.UserID,
+		"user_id":    sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    fmt.Sprintf("cat %s", path),
 	})
@@ -173,7 +176,7 @@ func (h *Handler) handleCloseSession(ctx context.Context, args map[string]any) (
 	}
 
 	key := sc.GetKey()
-	if h.manager.Close(sc.UserID, sc.SessionID) {
+	if h.manager.Close(sc.OwnerID, sc.SessionID) {
 		delete(h.sessions, key)
 		return mcp.NewToolResultText(fmt.Sprintf("Session %s closed", key)), nil
 	}

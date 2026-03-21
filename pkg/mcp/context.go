@@ -5,22 +5,25 @@ import (
 	"fmt"
 )
 
+// Scarf holds owner and session identity extracted from args or HTTP headers.
 type Scarf struct {
-	UserID    string
+	OwnerID   string
 	SessionID string
 }
 
 // GetKey returns "userID:sessionID" format key
 func (s Scarf) GetKey() string {
-	return s.UserID + ":" + s.SessionID
+	return s.OwnerID + ":" + s.SessionID
 }
 
 type ctxScarfKey struct{}
 
+// ContextWithScarf stores scarf into context.
 func ContextWithScarf(ctx context.Context, sc Scarf) context.Context {
 	return context.WithValue(ctx, ctxScarfKey{}, sc)
 }
 
+// ScarfFromContex retrieves scarf from context.
 func ScarfFromContex(ctx context.Context) (Scarf, bool) {
 	if s, ok := ctx.Value(ctxScarfKey{}).(Scarf); ok {
 		return s, true
@@ -32,20 +35,20 @@ func ScarfFromContex(ctx context.Context) (Scarf, bool) {
 // 并用 context 中已存在的 Scarf 值覆盖（如果 Scarf 非空）
 func ParseScarfFromArgs(ctx context.Context, args map[string]any) (Scarf, error) {
 	sc := Scarf{
-		UserID:    getStringArg(args, "user_id"),
+		OwnerID:   getStringArg(args, "user_id"),
 		SessionID: getStringArg(args, "session_id"),
 	}
 
 	if existing, ok := ScarfFromContex(ctx); ok {
-		if existing.UserID != "" {
-			sc.UserID = existing.UserID
+		if existing.OwnerID != "" {
+			sc.OwnerID = existing.OwnerID
 		}
 		if existing.SessionID != "" {
 			sc.SessionID = existing.SessionID
 		}
 	}
 
-	if sc.UserID == "" || sc.SessionID == "" {
+	if sc.OwnerID == "" || sc.SessionID == "" {
 		return sc, fmt.Errorf("user_id and session_id are required")
 	}
 

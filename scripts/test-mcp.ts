@@ -126,13 +126,13 @@ async function main() {
     console.error(`  ${resp.result.content[0].text}`);
   });
 
-  // Test 4b: Exec pwd via header-based identity (X-User-Id, X-Session-Id)
+  // Test 4b: Exec pwd via header-based identity (X-Owner-Id, X-Session-Id)
   await test("exec pwd via header identity", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "exec",
       arguments: { command: "pwd" },
     }, {
-      "X-User-Id": USER,
+      "X-Owner-Id": USER,
       "X-Session-Id": SESSION,
     });
     if (!resp.result?.content?.[0]?.text) {
