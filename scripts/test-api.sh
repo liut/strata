@@ -7,12 +7,43 @@
 set -o pipefail
 # set -e  # 注释掉，避免 grep 等命令失败导致脚本退出
 
+# ───────────────────────────────────────────────────────────
+# 依赖检查
+# ───────────────────────────────────────────────────────────
+check_dependencies() {
+    local missing=()
+    for cmd in curl; do
+        command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+    done
+
+    # 可选但推荐的工具
+    local optional=()
+    command -v websocat >/dev/null 2>&1 || optional+=("websocat (用于完整 WebSocket 测试)")
+    command -v timeout >/dev/null 2>&1 || optional+=("timeout (coreutils)")
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo -e "${RED}错误: 缺少必需工具: ${missing[*]}${NC}"
+        exit 1
+    fi
+
+    if [ ${#optional[@]} -gt 0 ]; then
+        echo -e "${YELLOW}提示: 可安装工具以支持完整测试:${NC}"
+        for tool in "${optional[@]}"; do
+            echo -e "  - $tool"
+        done
+        echo
+    fi
+}
+
+check_dependencies
+
+# ───────────────────────────────────────────────────────────
+# 配置
+# ───────────────────────────────────────────────────────────
 # 默认配置
-HOST="${STRATA_HOST:-localhost}"
-PORT="${STRATA_PORT:-2280}"
-BASE_URL="http://${HOST}:${PORT}"
-WS_URL="ws://${HOST}:${PORT}"
-TIMEOUT=5
+STRATA_ADDR="${STRATA_ADDR:-localhost:2280}"
+BASE_URL="http://${STRATA_ADDR}"
+WS_URL="ws://${STRATA_ADDR}"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -181,22 +212,30 @@ test_close_session() {
 test_websocket() {
     log_info "测试: WebSocket shell"
 
-    # 使用 websocat 或 wscat 进行测试
-    # 这里使用简化的 curl 测试连接升级
-
     # 先创建一个新 session（因为之前的已关闭）
     curl -s -X POST "${BASE_URL}/api/sessions" \
         -H "Content-Type: application/json" \
         -d "{\"owner_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}_ws\"}" > /dev/null
 
-    # 测试 WebSocket 升级（不使用 curl，用 nc 或其他工具）
+    # 使用 websocat 进行真实 WebSocket 测试
     if command -v websocat &> /dev/null; then
-        # 发送输入，接收输出
-        echo '{"type":"input","data":"echo ws_test\n"}' | \
-            timeout 5 websocat "${WS_URL}/api/ws/${TEST_USER}/${TEST_SESSION}_ws/shell" 2>/dev/null
-        log_pass "WebSocket 测试完成 (websocat)"
+        # 创建临时文件存储结果
+        local tmpfile=$(mktemp)
+        echo '{"type":"input","data":"echo WSTEST_MARKER\n"}' | \
+            websocat "${WS_URL}/api/ws/${TEST_USER}/${TEST_SESSION}_ws/shell" > "$tmpfile" 2>/dev/null &
+        local pid=$!
+        sleep 2
+        kill $pid 2>/dev/null
+        wait $pid 2>/dev/null
+        local result=$(cat "$tmpfile")
+        rm -f "$tmpfile"
+        if echo "$result" | grep -q "WSTEST_MARKER"; then
+            log_pass "WebSocket 测试成功: $result"
+        else
+            log_fail "WebSocket 测试失败: $result"
+        fi
     elif command -v wscat &> /dev/null; then
-        log_pass "WebSocket 测试需要手动验证 (wscat)"
+        log_info "WebSocket 测试需要手动验证 (wscat)"
     else
         # 简单测试 WebSocket 端点是否可访问
         local http_code
@@ -204,9 +243,7 @@ test_websocket() {
             -H "Connection: Upgrade" \
             -H "Upgrade: websocket" \
             "${BASE_URL}/api/ws/${TEST_USER}/${TEST_SESSION}_ws/shell")
-        if [ "$http_code" = "101" ] || [ "$http_code" = "400" ]; then
-            # 101 = Switching Protocols (成功)
-            # 400 = Bad Request (说明 WebSocket 支持存在，只是协议不匹配)
+        if [ "$http_code" = "101" ]; then
             log_pass "WebSocket 端点可访问 (http code: $http_code)"
         else
             log_fail "WebSocket 端点异常 (http code: $http_code)"
@@ -226,18 +263,42 @@ test_websocket_with_header_identity() {
         -H "Content-Type: application/json" \
         -d "{\"owner_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}_ws_header\"}" > /dev/null
 
-    # 测试 WebSocket 端点（Header identity）
-    local http_code
-    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
-        -H "Connection: Upgrade" \
-        -H "Upgrade: websocket" \
-        -H "X-Owner-Id: ${TEST_USER}" \
-        -H "X-Session-Id: ${TEST_SESSION}_ws_header" \
-        "${BASE_URL}/api/ws/shell")
-    if [ "$http_code" = "101" ] || [ "$http_code" = "400" ]; then
-        log_pass "WebSocket Header身份端点可访问 (http code: $http_code)"
+    # 使用 websocat 进行真实 WebSocket 测试（Header identity）
+    if command -v websocat &> /dev/null; then
+        # 创建临时文件存储结果
+        local tmpfile=$(mktemp)
+        echo '{"type":"input","data":"echo WSHEADER_MARKER\n"}' | \
+            websocat \
+                --header="X-Owner-Id: ${TEST_USER}" \
+                --header="X-Session-Id: ${TEST_SESSION}_ws_header" \
+                "${WS_URL}/api/ws/shell" > "$tmpfile" 2>/dev/null &
+        local pid=$!
+        sleep 2
+        kill $pid 2>/dev/null
+        wait $pid 2>/dev/null
+        local result=$(cat "$tmpfile")
+        rm -f "$tmpfile"
+        if echo "$result" | grep -q "WSHEADER_MARKER"; then
+            log_pass "WebSocket Header身份测试成功: $result"
+        else
+            log_fail "WebSocket Header身份测试失败: $result"
+        fi
+    elif command -v wscat &> /dev/null; then
+        log_info "WebSocket 测试需要手动验证 (wscat)"
     else
-        log_fail "WebSocket Header身份端点异常 (http code: $http_code)"
+        # 简单测试 WebSocket 端点是否可访问
+        local http_code
+        http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Connection: Upgrade" \
+            -H "Upgrade: websocket" \
+            -H "X-Owner-Id: ${TEST_USER}" \
+            -H "X-Session-Id: ${TEST_SESSION}_ws_header" \
+            "${BASE_URL}/api/ws/shell")
+        if [ "$http_code" = "101" ]; then
+            log_pass "WebSocket Header身份端点可访问 (http code: $http_code)"
+        else
+            log_fail "WebSocket Header身份端点异常 (http code: $http_code)"
+        fi
     fi
 
     # 清理
