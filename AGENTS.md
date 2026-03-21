@@ -24,6 +24,46 @@ strata/
 └── scripts/                # Test & utility scripts
 ```
 
+## Dependencies
+
+### Build Dependencies
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| `meson` | Ninja build system generator | `apt install meson` |
+| `libcap-dev` | Libcap development headers (for bwrap caps) | `apt install libcap-dev` |
+
+### Runtime Dependencies
+
+| Package | Description | Install |
+|---------|-------------|---------|
+| `bubblewrap` | Sandboxing tool (`bwrap` command) | Build from [github.com/containers/bubblewrap](https://github.com/containers/bubblewrap) |
+| `fuse-overlayfs` | Userspace overlay filesystem | `apt install fuse-overlayfs` |
+
+### Building bubblewrap
+
+```bash
+git clone https://github.com/containers/bubblewrap
+cd bubblewrap
+meson _builddir
+meson compile -C _builddir
+meson test -C _builddir
+meson install -C _builddir
+```
+
+Note: After installing bwrap, you may need to set capabilities for it to allow sandboxing:
+
+```bash
+sudo setcap cap_sys_admin+ip /usr/bin/bwrap
+```
+
+### Optional Testing Tools
+
+| Tool | Purpose | Install |
+|------|---------|---------|
+| `websocat` | WebSocket client for testing | `apt install websocat` or build from source |
+| `timeout` | Command timeout wrapper (coreutils) | `apt install coreutils` |
+
 ## Key Packages
 
 | Package | Responsibility |
@@ -142,6 +182,8 @@ make build && ./dist/strata
 
 | Issue | Solution |
 |-------|----------|
+| bwrap not found | Build and install bubblewrap (see Dependencies) |
+| bwrap: permissions error | Run `sudo setcap cap_sys_admin+ip /usr/bin/bwrap` |
 | fuse-overlayfs not found | `apt install fuse-overlayfs` |
 | /dev/fuse permission denied | `sudo chmod 666 /dev/fuse` |
 | overlay mount failed | Try `STRATA_SANDBOX_OVERLAY_DRIVER=none` |
