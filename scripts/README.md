@@ -16,7 +16,7 @@
 
 # Test HTTP API
 ./scripts/test-api.sh
-STRATA_HOST=192.168.1.100 STRATA_PORT=9000 ./scripts/test-api.sh
+STRATA_ADDR=192.168.1.100:9000 ./scripts/test-api.sh
 
 # Test gRPC
 ./scripts/test-grpc.sh 192.168.1.100:2280
