@@ -231,7 +231,7 @@ func (s *Session) waitExit() {
 // ────────────────────────────────────────────────────────────
 
 type sessionOptions struct {
-	userID      string
+	ownerID     string
 	sessionID   string
 	sessionRoot string
 	baseRootfs  string // Manager 初始化好的 base rootfs
@@ -240,9 +240,9 @@ type sessionOptions struct {
 }
 
 func newSession(opts sessionOptions) (*Session, error) {
-	opts.userID = keyReplacer.Replace(opts.userID)
+	opts.ownerID = keyReplacer.Replace(opts.ownerID)
 	opts.sessionID = keyReplacer.Replace(opts.sessionID)
-	sessionDir := filepath.Join(opts.sessionRoot, opts.userID, opts.sessionID)
+	sessionDir := filepath.Join(opts.sessionRoot, opts.ownerID, opts.sessionID)
 	homeDir := filepath.Join(sessionDir, "home")
 
 	if err := os.MkdirAll(homeDir, 0700); err != nil {
@@ -359,7 +359,7 @@ func newSession(opts sessionOptions) (*Session, error) {
 
 	s := &Session{
 		id:          opts.sessionID,
-		owner:       opts.userID,
+		owner:       opts.ownerID,
 		created:     time.Now(),
 		lastHit:     time.Now(),
 		overlay:     overlay,

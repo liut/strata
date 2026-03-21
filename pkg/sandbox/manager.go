@@ -9,10 +9,15 @@ import (
 	"time"
 )
 
+// sessionKey returns "ownerID:sessionID" format key for session map.
+func sessionKey(ownerID, sessionID string) string {
+	return ownerID + ":" + sessionID
+}
+
 // Manager 管理所有用户的 Session 生命周期
 type Manager struct {
 	mu          sync.RWMutex
-	sessions    map[string]*Session // key: userID:sessionID
+	sessions    map[string]*Session // key: ownerID:sessionID
 	sessionRoot string
 	baseRootfs  string // 共享的 rootfs（用户配置或自动创建，包含 bash）
 	driver      OverlayDriver
@@ -21,6 +26,7 @@ type Manager struct {
 	maxSessions int
 }
 
+// ManagerConfig holds configuration for Manager.
 type ManagerConfig struct {
 	SessionRoot string
 	BaseRootfs  string
@@ -30,6 +36,7 @@ type ManagerConfig struct {
 	MaxSessions int
 }
 
+// NewManager creates a new Manager with the given config.
 func NewManager(cfg ManagerConfig) *Manager {
 	// 初始化 base rootfs
 	var baseRootfs string
@@ -63,8 +70,8 @@ func NewManager(cfg ManagerConfig) *Manager {
 }
 
 // GetOrCreate 获取已有 session，不存在则创建
-func (m *Manager) GetOrCreate(userID, sessionID string) (*Session, error) {
-	key := userID + ":" + sessionID
+func (m *Manager) GetOrCreate(ownerID, sessionID string) (*Session, error) {
+	key := sessionKey(ownerID, sessionID)
 	// slog.Debug("GetOrCreate called", "key", key, "activeSessions", len(m.sessions))
 
 	// 先用读锁快速检查
@@ -102,7 +109,7 @@ func (m *Manager) GetOrCreate(userID, sessionID string) (*Session, error) {
 	// slog.Debug("GetOrCreate: creating new session", "key", key, "currentSessions", len(m.sessions))
 
 	s, err := newSession(sessionOptions{
-		userID:      userID,
+		ownerID:     ownerID,
 		sessionID:   sessionID,
 		sessionRoot: m.sessionRoot,
 		baseRootfs: m.baseRootfs,
@@ -130,10 +137,10 @@ func (m *Manager) GetOrCreate(userID, sessionID string) (*Session, error) {
 }
 
 // Get 获取已有 session，不存在返回 nil, false
-func (m *Manager) Get(userID, sessionID string) (*Session, bool) {
+func (m *Manager) Get(ownerID, sessionID string) (*Session, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	s, ok := m.sessions[userID+":"+sessionID]
+	s, ok := m.sessions[sessionKey(ownerID, sessionID)]
 	if ok && s.IsClosed() {
 		return nil, false
 	}
@@ -141,11 +148,11 @@ func (m *Manager) Get(userID, sessionID string) (*Session, bool) {
 }
 
 // Close 主动关闭指定 session
-func (m *Manager) Close(userID, sessionID string) bool {
+func (m *Manager) Close(ownerID, sessionID string) bool {
 	m.mu.Lock()
-	s, ok := m.sessions[userID+":"+sessionID]
+	s, ok := m.sessions[sessionKey(ownerID, sessionID)]
 	if ok {
-		delete(m.sessions, userID+":"+sessionID)
+		delete(m.sessions, sessionKey(ownerID, sessionID))
 	}
 	m.mu.Unlock()
 

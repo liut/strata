@@ -10,6 +10,7 @@ import (
 // OverlayDriver 定义 overlay 实现
 type OverlayDriver string
 
+// OverlayDriver defines the overlay filesystem implementation.
 const (
 	DriverFuse   OverlayDriver = "fuse"   // fuse-overlayfs（无 root，推荐）
 	DriverKernel OverlayDriver = "kernel" // 内核 overlayfs in user namespace（Linux ≥ 5.11）

@@ -178,7 +178,7 @@ func TestNewSessionOptions(t *testing.T) {
 	}
 
 	opts := sessionOptions{
-		userID:       "testuser",
+		ownerID:      "testuser",
 		sessionID:    "testsession",
 		sessionRoot:  tmpDir,
 		baseRootfs: "",
@@ -186,8 +186,8 @@ func TestNewSessionOptions(t *testing.T) {
 		isolateNet:   false,
 	}
 
-	if opts.userID != "testuser" {
-		t.Errorf("userID = %q, want %q", opts.userID, "testuser")
+	if opts.ownerID != "testuser" {
+		t.Errorf("ownerID = %q, want %q", opts.ownerID, "testuser")
 	}
 	if opts.driver != DriverNone {
 		t.Errorf("driver = %q, want %q", opts.driver, DriverNone)
