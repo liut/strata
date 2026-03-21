@@ -59,10 +59,10 @@ func NewManager(cfg ManagerConfig) *Manager {
 	m := &Manager{
 		sessions:    make(map[string]*Session),
 		sessionRoot: cfg.SessionRoot,
-		baseRootfs: baseRootfs,
-		driver:     cfg.Driver,
-		isolateNet: cfg.IsolateNet,
-		ttl:        cfg.TTL,
+		baseRootfs:  baseRootfs,
+		driver:      cfg.Driver,
+		isolateNet:  cfg.IsolateNet,
+		ttl:         cfg.TTL,
 		maxSessions: cfg.MaxSessions,
 	}
 	go m.gcLoop()
@@ -112,11 +112,12 @@ func (m *Manager) GetOrCreate(ownerID, sessionID string) (*Session, error) {
 		ownerID:     ownerID,
 		sessionID:   sessionID,
 		sessionRoot: m.sessionRoot,
-		baseRootfs: m.baseRootfs,
-		driver:     m.driver,
-		isolateNet: m.isolateNet,
+		baseRootfs:  m.baseRootfs,
+		driver:      m.driver,
+		isolateNet:  m.isolateNet,
 	})
 	if err != nil {
+		slog.Info("newSession fail", "owner", ownerID, "sess", sessionID, "err", err)
 		return nil, err
 	}
 

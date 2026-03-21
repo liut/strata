@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 
 const (
 	// HeaderOwnerID is the HTTP header for owner identity.
-	HeaderOwnerID   = "X-Owner-Id"
+	HeaderOwnerID = "X-Owner-Id"
 	// HeaderSessionID is the HTTP header for session identity.
 	HeaderSessionID = "X-Session-Id"
 )
@@ -120,8 +121,9 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		return mcp.NewToolResultError("session not found"), nil
 	}
 
-	output, err := webapi.ExecInSession(sess, command, time.Duration(timeout)*time.Millisecond)
+	output, _, err := webapi.ExecInSession(sess, command, time.Duration(timeout)*time.Millisecond)
 	if err != nil {
+		slog.Info("exec fail", "cmd", command, "err", err)
 		return mcp.NewToolResultError("exec failed: " + err.Error()), nil
 	}
 
@@ -145,7 +147,7 @@ func (h *Handler) handleWriteFile(ctx context.Context, args map[string]any) (*mc
 
 	cmd := fmt.Sprintf("cat > '%s' << 'STRATA_EOF'\n%s\nSTRATA_EOF", path, content)
 	return h.handleExec(ctx, map[string]any{
-		"owner_id":    sc.OwnerID,
+		"owner_id":   sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    cmd,
 	})
@@ -163,7 +165,7 @@ func (h *Handler) handleReadFile(ctx context.Context, args map[string]any) (*mcp
 	}
 
 	return h.handleExec(ctx, map[string]any{
-		"owner_id":    sc.OwnerID,
+		"owner_id":   sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    fmt.Sprintf("cat %s", path),
 	})

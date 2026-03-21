@@ -54,7 +54,7 @@ func (s *Service) Exec(ctx context.Context, req *pb.ExecRequest) (*pb.ExecRespon
 		timeout = int(req.TimeoutMs)
 	}
 
-	output, err := webapi.ExecInSession(sess, req.Command, time.Duration(timeout)*time.Millisecond)
+	output, _, err := webapi.ExecInSession(sess, req.Command, time.Duration(timeout)*time.Millisecond)
 	if err != nil {
 		return &pb.ExecResponse{Error: err.Error()}, nil
 	}

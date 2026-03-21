@@ -23,10 +23,10 @@ var keyReplacer = strings.NewReplacer(
 
 // Session 表示一个用户隔离的 Shell 会话
 type Session struct {
-	id       string
-	owner    string
-	created  time.Time
-	lastHit  time.Time
+	id      string
+	owner   string
+	created time.Time
+	lastHit time.Time
 
 	overlay *OverlayMount
 	ptmx    *os.File  // PTY 主端（服务侧）
@@ -69,6 +69,7 @@ func (s *Session) Done() <-chan struct{} {
 
 // Write 向 Shell 写入输入数据（用户键盘/指令）
 func (s *Session) Write(data []byte) (int, error) {
+	slog.Debug("writing", "data", len(data))
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
@@ -86,6 +87,7 @@ func (s *Session) Read(buf []byte) (int, error) {
 		s.lastHit = time.Now()
 		s.mu.Unlock()
 	}
+	slog.Debug("read", "n", n)
 	return n, err
 }
 
@@ -117,6 +119,7 @@ func (s *Session) Close() {
 		}()
 	}
 	close(s.done)
+	slog.Info("session close", "sid", s.id)
 }
 
 // IsClosed 返回 session 是否已关闭
@@ -355,7 +358,8 @@ func newSession(opts sessionOptions) (*Session, error) {
 		}
 	}
 
-	slog.Info("shell process started", "pid", cmd.Process.Pid, "driver", opts.driver)
+	slog.Info("shell process started", "pid", cmd.Process.Pid, "driver", opts.driver,
+		"owner", opts.ownerID, "sess", opts.sessionID)
 
 	s := &Session{
 		id:          opts.sessionID,
