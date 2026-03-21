@@ -107,6 +107,23 @@ test_exec_command() {
     fi
 }
 
+# Header-only identity test
+test_exec_with_header_identity() {
+    log_info "测试: POST /api/sessions/exec (Header identity)"
+    local resp
+    resp=$(curl -s -X POST "${BASE_URL}/api/sessions/exec" \
+        -H "Content-Type: application/json" \
+        -H "X-Owner-Id: ${TEST_USER}" \
+        -H "X-Session-Id: ${TEST_SESSION}" \
+        -d '{"command": "echo hello_from_header"}')
+
+    if echo "$resp" | grep -q "output"; then
+        log_pass "Header身份执行成功: $resp"
+    else
+        log_fail "Header身份执行失败: $resp"
+    fi
+}
+
 test_exec_pwd_and_ls() {
     log_info "测试: 执行 pwd 和 ls / 命令"
 
@@ -200,6 +217,33 @@ test_websocket() {
     curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}_ws" > /dev/null
 }
 
+# Header-only identity WebSocket test
+test_websocket_with_header_identity() {
+    log_info "测试: GET /api/ws/shell (Header identity)"
+
+    # 先创建一个新 session
+    curl -s -X POST "${BASE_URL}/api/sessions" \
+        -H "Content-Type: application/json" \
+        -d "{\"owner_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}_ws_header\"}" > /dev/null
+
+    # 测试 WebSocket 端点（Header identity）
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" \
+        -H "Connection: Upgrade" \
+        -H "Upgrade: websocket" \
+        -H "X-Owner-Id: ${TEST_USER}" \
+        -H "X-Session-Id: ${TEST_SESSION}_ws_header" \
+        "${BASE_URL}/api/ws/shell")
+    if [ "$http_code" = "101" ] || [ "$http_code" = "400" ]; then
+        log_pass "WebSocket Header身份端点可访问 (http code: $http_code)"
+    else
+        log_fail "WebSocket Header身份端点异常 (http code: $http_code)"
+    fi
+
+    # 清理
+    curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}_ws_header" > /dev/null
+}
+
 test_invalid_session() {
     log_info "测试: 无效会话处理"
     local resp
@@ -253,6 +297,7 @@ main() {
     test_create_session
     test_exec_command
     test_exec_pwd_and_ls
+    test_exec_with_header_identity  # Header-only identity
     test_exec_with_timeout
 
     echo
@@ -263,6 +308,7 @@ main() {
     echo
     echo "--- WebSocket 测试 ---"
     test_websocket
+    test_websocket_with_header_identity  # Header-only identity
 
     echo
     echo "--- 清理测试 ---"
@@ -284,6 +330,7 @@ cleanup() {
     log_info "清理测试会话..."
     curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}" > /dev/null 2>&1
     curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}_ws" > /dev/null 2>&1
+    curl -s -X DELETE "${BASE_URL}/api/sessions/${TEST_USER}/${TEST_SESSION}_ws_header" > /dev/null 2>&1
 }
 trap cleanup EXIT
 

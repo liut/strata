@@ -31,8 +31,10 @@ func (h *handlerImpl) Route(mux Handler) {
 	mux.Handle("POST /api/sessions", http.HandlerFunc(h.handleCreateSession))
 	mux.Handle("DELETE /api/sessions/{uid}/{sid}", http.HandlerFunc(h.handleCloseSession))
 	mux.Handle("POST /api/sessions/{uid}/{sid}/exec", http.HandlerFunc(h.handleExec))
+	mux.Handle("POST /api/sessions/exec", http.HandlerFunc(h.handleExec))
 	mux.Handle("GET /api/stats", http.HandlerFunc(h.handleStats))
 	mux.Handle("GET /api/ws/{uid}/{sid}/shell", http.HandlerFunc(h.handleShellWS))
+	mux.Handle("GET /api/ws/shell", http.HandlerFunc(h.handleShellWS))
 }
 
 // handleCreateSession 创建或复用 session

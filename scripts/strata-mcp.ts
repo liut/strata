@@ -239,12 +239,10 @@ class StrataMCPServer {
       await this.handleCreateSession({ owner_id, session_id });
     }
 
-    const res = await apiCall<{ output: string; elapsed: string }>("/api/exec", {
-      owner_id,
-      session_id,
-      command,
-      timeout_ms,
-    });
+    const res = await apiCall<{ output: string; elapsed: string }>(
+      `/api/sessions/${owner_id}/${session_id}/exec`,
+      { command, timeout_ms }
+    );
 
     return {
       content: [
