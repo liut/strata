@@ -21,25 +21,16 @@ type Router interface {
 
 // Handler 处理 MCP 工具调用
 type Handler struct {
-	manager  *sandbox.Manager
-	sessions map[string]*SessionInfo
-	mcps     *server.MCPServer
-}
-
-// SessionInfo MCP 缓存的 session 信息
-type SessionInfo struct {
-	OwnerID   string
-	SessionID string
-	CreatedAt string
+	manager *sandbox.Manager
+	mcps   *server.MCPServer
 }
 
 // NewHandler creates a new MCP handler.
 func NewHandler(manager *sandbox.Manager, name, version string) *Handler {
 	mcpsvr := server.NewMCPServer(name, version)
 	h := &Handler{
-		manager:  manager,
-		sessions: make(map[string]*SessionInfo),
-		mcps:     mcpsvr,
+		manager: manager,
+		mcps:    mcpsvr,
 	}
 	SetupTools(mcpsvr, h)
 	return h
@@ -61,31 +52,8 @@ func builtContextFromRequest(ctx context.Context, r *http.Request) context.Conte
 	})
 }
 
-func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	sc, err := ParseScarfFromArgs(ctx, args)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	key := sc.GetKey()
-	if _, exists := h.sessions[key]; !exists {
-		sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
-		if err != nil {
-			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
-		}
-		h.sessions[key] = &SessionInfo{
-			OwnerID:   sess.UID(),
-			SessionID: sess.ID(),
-			CreatedAt: sess.Created().Format("2006-01-02T15:04:05Z07:00"),
-		}
-	}
-
-	sm := h.sessions[key]
-	return mcp.NewToolResultText(fmt.Sprintf("Session: %s/%s", sm.OwnerID, sm.SessionID)), nil
-}
-
 func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	sc, err := ParseScarfFromArgs(ctx, args)
+	sc, err := identity.ParseScarf(ctx, identity.FromArgs(args))
 	if err != nil {
 		return mcp.NewToolResultError(err.Error()), nil
 	}
@@ -96,23 +64,14 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		return mcp.NewToolResultError("command is required"), nil
 	}
 
-	// 确保 session 存在
-	key := sc.GetKey()
-	if _, exists := h.sessions[key]; !exists {
-		_, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
-		if err != nil {
-			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
-		}
-	}
-
 	timeout := 30000
 	if timeoutMs > 0 {
 		timeout = int(timeoutMs)
 	}
 
-	sess, ok := h.manager.Get(sc.OwnerID, sc.SessionID)
-	if !ok {
-		return mcp.NewToolResultError("session not found"), nil
+	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
+	if err != nil {
+		return mcp.NewToolResultError("session failed: " + err.Error()), nil
 	}
 
 	output, _, err := webapi.ExecInSession(sess, command, time.Duration(timeout)*time.Millisecond)
@@ -125,58 +84,6 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		output = "(empty output)"
 	}
 	return mcp.NewToolResultText(output), nil
-}
-
-func (h *Handler) handleWriteFile(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	sc, err := ParseScarfFromArgs(ctx, args)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-	path, _ := args["path"].(string)
-	content, _ := args["content"].(string)
-
-	if path == "" {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	cmd := fmt.Sprintf("cat > '%s' << 'STRATA_EOF'\n%s\nSTRATA_EOF", path, content)
-	return h.handleExec(ctx, map[string]any{
-		"owner_id":   sc.OwnerID,
-		"session_id": sc.SessionID,
-		"command":    cmd,
-	})
-}
-
-func (h *Handler) handleReadFile(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	sc, err := ParseScarfFromArgs(ctx, args)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-	path, _ := args["path"].(string)
-
-	if path == "" {
-		return mcp.NewToolResultError("path is required"), nil
-	}
-
-	return h.handleExec(ctx, map[string]any{
-		"owner_id":   sc.OwnerID,
-		"session_id": sc.SessionID,
-		"command":    fmt.Sprintf("cat %s", path),
-	})
-}
-
-func (h *Handler) handleCloseSession(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	sc, err := ParseScarfFromArgs(ctx, args)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	key := sc.GetKey()
-	if h.manager.Close(sc.OwnerID, sc.SessionID) {
-		delete(h.sessions, key)
-		return mcp.NewToolResultText(fmt.Sprintf("Session %s closed", key)), nil
-	}
-	return mcp.NewToolResultError("session not found"), nil
 }
 
 func (h *Handler) handleStats(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {

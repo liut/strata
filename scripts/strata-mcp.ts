@@ -8,7 +8,7 @@
  *
  * Environment Variables:
  *   STRATA_API    Strata server URL (default: http://localhost:2280)
- *   STRATA_UID    Default user ID (if set, owner_id param becomes optional)
+ *   STRATA_UID    Default user ID (optional, identity from header or args)
  *
  * Usage:
  *   npx tsx scripts/strata-mcp.ts
@@ -29,94 +29,30 @@ import {
 const API_BASE = process.env.STRATA_API || "http://localhost:2280";
 const STRATA_UID = process.env.STRATA_UID?.trim() || "";
 
-interface Session {
-  owner_id: string;
-  session_id: string;
-  created_at?: string;
-}
-
-// Cache created sessions
-const sessions = new Map<string, Session>();
-
 // Dynamically build tools based on STRATA_UID presence
 function buildTools() {
-  const userIdProp = STRATA_UID
+  const ownerIdProp = STRATA_UID
     ? { description: `User ID (fixed to ${STRATA_UID})` }
-    : { type: "string", description: "User identifier, e.g., 'alice'" };
-
-  const baseProps = {
-    owner_id: { ...userIdProp },
-    session_id: { type: "string", description: "Session identifier, e.g., 'task-001'" },
-  };
-
-  const requireUserId = !STRATA_UID;
+    : { type: "string", description: "User identifier" };
 
   return [
     {
-      name: "strata_create_session",
-      description: `Create or reuse a sandbox session${STRATA_UID ? ` (user: ${STRATA_UID})` : ""}`,
-      inputSchema: {
-        type: "object",
-        properties: requireUserId ? baseProps : { session_id: baseProps.session_id },
-        required: requireUserId ? ["owner_id", "session_id"] : ["session_id"],
-      },
-    },
-    {
       name: "strata_exec",
-      description: "Execute a shell command in the specified session and return the output.",
+      description: "Execute a shell command in sandbox session (auto-creates session)",
       inputSchema: {
         type: "object",
         properties: {
-          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
-          session_id: baseProps.session_id,
+          owner_id: { ...ownerIdProp },
+          session_id: { type: "string", description: "Session identifier" },
           command: { type: "string", description: "Shell command to execute" },
-          timeout_ms: { type: "number", description: "Timeout in milliseconds, default 30000", default: 30000 },
+          timeout_ms: { type: "number", description: "Timeout in milliseconds", default: 30000 },
         },
-        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "command"],
-      },
-    },
-    {
-      name: "strata_write_file",
-      description: "Create or overwrite a file in the sandbox session.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
-          session_id: baseProps.session_id,
-          path: { type: "string", description: "Target file path, e.g., '/tmp/test.py'" },
-          content: { type: "string", description: "File content" },
-        },
-        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "path", "content"],
-      },
-    },
-    {
-      name: "strata_read_file",
-      description: "Read file content from the sandbox session.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
-          session_id: baseProps.session_id,
-          path: { type: "string", description: "File path to read" },
-        },
-        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "path"],
-      },
-    },
-    {
-      name: "strata_close_session",
-      description: "Close and cleanup a sandbox session to release resources.",
-      inputSchema: {
-        type: "object",
-        properties: {
-          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
-          session_id: baseProps.session_id,
-        },
-        required: [...(requireUserId ? ["owner_id"] : []), "session_id"],
+        required: ["command"],
       },
     },
     {
       name: "strata_stats",
-      description: "Query service status (active sessions, etc.).",
+      description: "Query service status (active sessions, etc.)",
       inputSchema: {
         type: "object",
         properties: {},
@@ -125,22 +61,11 @@ function buildTools() {
   ];
 }
 
-// Get actual owner_id (prefer args, fallback to env var)
-function getUserId(argsUserId?: string): string {
-  if (argsUserId && argsUserId.trim()) {
-    return argsUserId;
-  }
-  return STRATA_UID;
-}
-
-// Dynamically generated tools list
-const TOOLS = buildTools();
-
-async function apiCall<T>(path: string, body: any): Promise<T> {
+async function apiCall<T>(path: string, body?: any): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
+    method: body ? "POST" : "GET",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
     const err = await res.text();
@@ -148,6 +73,9 @@ async function apiCall<T>(path: string, body: any): Promise<T> {
   }
   return res.json();
 }
+
+// Dynamically generated tools list
+const TOOLS = buildTools();
 
 // ─────────────────────────────────────────────────────────
 // Server Implementation
@@ -171,16 +99,8 @@ class StrataMCPServer {
 
       try {
         switch (name) {
-          case "strata_create_session":
-            return this.handleCreateSession(args);
           case "strata_exec":
             return this.handleExec(args);
-          case "strata_write_file":
-            return this.handleWriteFile(args);
-          case "strata_read_file":
-            return this.handleReadFile(args);
-          case "strata_close_session":
-            return this.handleCloseSession(args);
           case "strata_stats":
             return this.handleStats();
           default:
@@ -205,38 +125,13 @@ class StrataMCPServer {
   // Tool Handlers
   // ─────────────────────────────────────────
 
-  private async handleCreateSession(args: any) {
-    const owner_id = getUserId(args.owner_id);
-    const { session_id } = args;
-    const key = `${owner_id}:${session_id}`;
-
-    if (!sessions.has(key)) {
-      const res = await apiCall<Session>("/api/sessions", {
-        owner_id,
-        session_id,
-      });
-      sessions.set(key, res);
-    }
-
-    const s = sessions.get(key)!;
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Session created/retrieved: ${s.owner_id}/${s.session_id}`,
-        },
-      ],
-    };
-  }
-
   private async handleExec(args: any) {
-    const owner_id = getUserId(args.owner_id);
-    const { session_id, command, timeout_ms = 30000 } = args;
-    const key = `${owner_id}:${session_id}`;
+    const owner_id = args.owner_id || STRATA_UID;
+    const session_id = args.session_id;
+    const { command, timeout_ms = 30000 } = args;
 
-    // Ensure session exists
-    if (!sessions.has(key)) {
-      await this.handleCreateSession({ owner_id, session_id });
+    if (!owner_id || !session_id) {
+      throw new Error("owner_id and session_id are required");
     }
 
     const res = await apiCall<{ output: string; elapsed: string }>(
@@ -254,37 +149,8 @@ class StrataMCPServer {
     };
   }
 
-  private async handleWriteFile(args: any) {
-    const owner_id = getUserId(args.owner_id);
-    const { session_id, path, content } = args;
-    const cmd = `cat > '${path}' << 'STRATA_EOF'\n${content}\nSTRATA_EOF`;
-    return this.handleExec({ owner_id, session_id, command: cmd });
-  }
-
-  private async handleReadFile(args: any) {
-    const owner_id = getUserId(args.owner_id);
-    const { session_id, path } = args;
-    return this.handleExec({ owner_id, session_id, command: `cat ${path}` });
-  }
-
-  private async handleCloseSession(args: any) {
-    const owner_id = getUserId(args.owner_id);
-    const { session_id } = args;
-    const key = `${owner_id}:${session_id}`;
-
-    await fetch(`${API_BASE}/api/sessions/${owner_id}/${session_id}`, {
-      method: "DELETE",
-    });
-    sessions.delete(key);
-
-    return {
-      content: [{ type: "text", text: `Session ${key} closed` }],
-    };
-  }
-
   private async handleStats() {
-    const res = await fetch(`${API_BASE}/api/stats`);
-    const stats = await res.json();
+    const stats = await apiCall<any>("/api/stats");
     return {
       content: [
         {

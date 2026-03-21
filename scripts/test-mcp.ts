@@ -25,7 +25,7 @@ const NC = "\x1b[0m";
 let passed = 0;
 let failed = 0;
 let nextId = 1;
-let sessionId = "";
+let mcpSessionId = "";
 
 function jsonRequest(method: string, params?: any): any {
   return { jsonrpc: "2.0", id: nextId++, method, params };
@@ -39,8 +39,9 @@ async function mcpRequest(method: string, params?: any, headers?: Record<string,
     ...headers,
   };
 
-  if (sessionId) {
-    reqHeaders["Mcp-Session-Id"] = sessionId;
+  // MCP session handling
+  if (mcpSessionId) {
+    reqHeaders["MCP-Session-ID"] = mcpSessionId;
   }
 
   const res = await fetch(MCP_URL, {
@@ -49,10 +50,10 @@ async function mcpRequest(method: string, params?: any, headers?: Record<string,
     body: JSON.stringify(req),
   });
 
-  // Save session ID from response
-  const newSessionId = res.headers.get("Mcp-Session-Id");
+  // Save MCP session ID from response
+  const newSessionId = res.headers.get("MCP-Session-ID");
   if (newSessionId) {
-    sessionId = newSessionId;
+    mcpSessionId = newSessionId;
   }
 
   if (!res.ok) {
@@ -99,23 +100,11 @@ async function main() {
     if (!resp.result?.tools?.length) {
       throw new Error("No tools returned");
     }
-    console.error(`  Found ${resp.result.tools.length} tools`);
+    console.error(`  Found ${resp.result.tools.length} tools: ${resp.result.tools.map((t: any) => t.name).join(", ")}`);
   });
 
-  // Test 3: Create session
-  await test("create_session", async () => {
-    const resp = await mcpRequest("tools/call", {
-      name: "create_session",
-      arguments: { owner_id: USER, session_id: SESSION },
-    });
-    if (!resp.result?.content?.[0]?.text) {
-      throw new Error("No session created");
-    }
-    console.error(`  ${resp.result.content[0].text}`);
-  });
-
-  // Test 4: Exec pwd
-  await test("exec pwd", async () => {
+  // Test 3: Exec pwd (with identity in args)
+  await test("exec pwd (args identity)", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "exec",
       arguments: { owner_id: USER, session_id: SESSION, command: "pwd" },
@@ -126,8 +115,8 @@ async function main() {
     console.error(`  ${resp.result.content[0].text}`);
   });
 
-  // Test 4b: Exec pwd via header-based identity (X-Owner-Id, X-Session-Id)
-  await test("exec pwd via header identity", async () => {
+  // Test 4: Exec pwd via header-based identity
+  await test("exec pwd (header identity)", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "exec",
       arguments: { command: "pwd" },
@@ -141,7 +130,19 @@ async function main() {
     console.error(`  ${resp.result.content[0].text}`);
   });
 
-  // Test 5: Stats
+  // Test 5: Exec with timeout
+  await test("exec with timeout", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "exec",
+      arguments: { owner_id: USER, session_id: SESSION, command: "echo hello", timeout_ms: 5000 },
+    });
+    if (!resp.result?.content?.[0]?.text) {
+      throw new Error("No output");
+    }
+    console.error(`  ${resp.result.content[0].text}`);
+  });
+
+  // Test 6: Stats
   await test("stats", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "stats",
@@ -151,17 +152,6 @@ async function main() {
       throw new Error("No stats");
     }
     console.error(`  ${resp.result.content[0].text}`);
-  });
-
-  // Test 6: Close session
-  await test("close_session", async () => {
-    const resp = await mcpRequest("tools/call", {
-      name: "close_session",
-      arguments: { owner_id: USER, session_id: SESSION },
-    });
-    if (!resp.result?.content) {
-      throw new Error("Close failed");
-    }
   });
 
   // Summary
