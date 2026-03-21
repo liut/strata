@@ -81,7 +81,7 @@ func (s *Service) Shell(stream pb.SandboxService_ShellServer) error {
 	uid := first.OwnerID
 	sid := first.SessionID
 	if uid == "" || sid == "" {
-		return fmt.Errorf("user_id and session_id required in first message")
+		return fmt.Errorf("owner_id and session_id required in first message")
 	}
 
 	sess, err := s.manager.GetOrCreate(uid, sid)

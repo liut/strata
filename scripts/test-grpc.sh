@@ -25,12 +25,12 @@ if ! command -v grpcurl &> /dev/null; then
 fi
 
 echo "--- Test 1: Create Session ---"
-grpcurl -plaintext -proto "$PROTO" -d "{\"user_id\":\"$USER\",\"session_id\":\"${SESSION}-1\"}" \
+grpcurl -plaintext -proto "$PROTO" -d "{\"ownerID\":\"$USER\",\"sessionID\":\"${SESSION}-1\"}" \
     $HOST sandbox.SandboxService/CreateSession
 
 echo ""
 echo "--- Test 2: Exec Command ---"
-grpcurl -plaintext -proto "$PROTO" -d "{\"user_id\":\"$USER\",\"session_id\":\"${SESSION}-1\",\"command\":\"echo hello from grpc\"}" \
+grpcurl -plaintext -proto "$PROTO" -d "{\"ownerID\":\"$USER\",\"sessionID\":\"${SESSION}-1\",\"command\":\"echo hello from grpc\"}" \
     $HOST sandbox.SandboxService/Exec
 
 echo ""
@@ -39,7 +39,7 @@ grpcurl -plaintext -proto "$PROTO" -d "{}" $HOST sandbox.SandboxService/Stats
 
 echo ""
 echo "--- Test 4: Close Session ---"
-grpcurl -plaintext -proto "$PROTO" -d "{\"user_id\":\"$USER\",\"session_id\":\"${SESSION}-1\"}" \
+grpcurl -plaintext -proto "$PROTO" -d "{\"ownerID\":\"$USER\",\"sessionID\":\"${SESSION}-1\"}" \
     $HOST sandbox.SandboxService/CloseSession
 
 echo ""

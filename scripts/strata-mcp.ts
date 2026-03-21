@@ -8,7 +8,7 @@
  *
  * Environment Variables:
  *   STRATA_API    Strata server URL (default: http://localhost:2280)
- *   STRATA_UID    Default user ID (if set, user_id param becomes optional)
+ *   STRATA_UID    Default user ID (if set, owner_id param becomes optional)
  *
  * Usage:
  *   npx tsx scripts/strata-mcp.ts
@@ -30,7 +30,7 @@ const API_BASE = process.env.STRATA_API || "http://localhost:2280";
 const STRATA_UID = process.env.STRATA_UID?.trim() || "";
 
 interface Session {
-  user_id: string;
+  owner_id: string;
   session_id: string;
   created_at?: string;
 }
@@ -45,7 +45,7 @@ function buildTools() {
     : { type: "string", description: "User identifier, e.g., 'alice'" };
 
   const baseProps = {
-    user_id: { ...userIdProp },
+    owner_id: { ...userIdProp },
     session_id: { type: "string", description: "Session identifier, e.g., 'task-001'" },
   };
 
@@ -58,7 +58,7 @@ function buildTools() {
       inputSchema: {
         type: "object",
         properties: requireUserId ? baseProps : { session_id: baseProps.session_id },
-        required: requireUserId ? ["user_id", "session_id"] : ["session_id"],
+        required: requireUserId ? ["owner_id", "session_id"] : ["session_id"],
       },
     },
     {
@@ -67,12 +67,12 @@ function buildTools() {
       inputSchema: {
         type: "object",
         properties: {
-          ...(requireUserId ? { user_id: baseProps.user_id } : {}),
+          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
           session_id: baseProps.session_id,
           command: { type: "string", description: "Shell command to execute" },
           timeout_ms: { type: "number", description: "Timeout in milliseconds, default 30000", default: 30000 },
         },
-        required: [...(requireUserId ? ["user_id"] : []), "session_id", "command"],
+        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "command"],
       },
     },
     {
@@ -81,12 +81,12 @@ function buildTools() {
       inputSchema: {
         type: "object",
         properties: {
-          ...(requireUserId ? { user_id: baseProps.user_id } : {}),
+          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
           session_id: baseProps.session_id,
           path: { type: "string", description: "Target file path, e.g., '/tmp/test.py'" },
           content: { type: "string", description: "File content" },
         },
-        required: [...(requireUserId ? ["user_id"] : []), "session_id", "path", "content"],
+        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "path", "content"],
       },
     },
     {
@@ -95,11 +95,11 @@ function buildTools() {
       inputSchema: {
         type: "object",
         properties: {
-          ...(requireUserId ? { user_id: baseProps.user_id } : {}),
+          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
           session_id: baseProps.session_id,
           path: { type: "string", description: "File path to read" },
         },
-        required: [...(requireUserId ? ["user_id"] : []), "session_id", "path"],
+        required: [...(requireUserId ? ["owner_id"] : []), "session_id", "path"],
       },
     },
     {
@@ -108,10 +108,10 @@ function buildTools() {
       inputSchema: {
         type: "object",
         properties: {
-          ...(requireUserId ? { user_id: baseProps.user_id } : {}),
+          ...(requireUserId ? { owner_id: baseProps.owner_id } : {}),
           session_id: baseProps.session_id,
         },
-        required: [...(requireUserId ? ["user_id"] : []), "session_id"],
+        required: [...(requireUserId ? ["owner_id"] : []), "session_id"],
       },
     },
     {
@@ -125,7 +125,7 @@ function buildTools() {
   ];
 }
 
-// Get actual user_id (prefer args, fallback to env var)
+// Get actual owner_id (prefer args, fallback to env var)
 function getUserId(argsUserId?: string): string {
   if (argsUserId && argsUserId.trim()) {
     return argsUserId;
@@ -206,13 +206,13 @@ class StrataMCPServer {
   // ─────────────────────────────────────────
 
   private async handleCreateSession(args: any) {
-    const user_id = getUserId(args.user_id);
+    const owner_id = getUserId(args.owner_id);
     const { session_id } = args;
-    const key = `${user_id}:${session_id}`;
+    const key = `${owner_id}:${session_id}`;
 
     if (!sessions.has(key)) {
       const res = await apiCall<Session>("/api/sessions", {
-        user_id,
+        owner_id,
         session_id,
       });
       sessions.set(key, res);
@@ -223,24 +223,24 @@ class StrataMCPServer {
       content: [
         {
           type: "text",
-          text: `Session created/retrieved: ${s.user_id}/${s.session_id}`,
+          text: `Session created/retrieved: ${s.owner_id}/${s.session_id}`,
         },
       ],
     };
   }
 
   private async handleExec(args: any) {
-    const user_id = getUserId(args.user_id);
+    const owner_id = getUserId(args.owner_id);
     const { session_id, command, timeout_ms = 30000 } = args;
-    const key = `${user_id}:${session_id}`;
+    const key = `${owner_id}:${session_id}`;
 
     // Ensure session exists
     if (!sessions.has(key)) {
-      await this.handleCreateSession({ user_id, session_id });
+      await this.handleCreateSession({ owner_id, session_id });
     }
 
     const res = await apiCall<{ output: string; elapsed: string }>("/api/exec", {
-      user_id,
+      owner_id,
       session_id,
       command,
       timeout_ms,
@@ -257,24 +257,24 @@ class StrataMCPServer {
   }
 
   private async handleWriteFile(args: any) {
-    const user_id = getUserId(args.user_id);
+    const owner_id = getUserId(args.owner_id);
     const { session_id, path, content } = args;
     const cmd = `cat > '${path}' << 'STRATA_EOF'\n${content}\nSTRATA_EOF`;
-    return this.handleExec({ user_id, session_id, command: cmd });
+    return this.handleExec({ owner_id, session_id, command: cmd });
   }
 
   private async handleReadFile(args: any) {
-    const user_id = getUserId(args.user_id);
+    const owner_id = getUserId(args.owner_id);
     const { session_id, path } = args;
-    return this.handleExec({ user_id, session_id, command: `cat ${path}` });
+    return this.handleExec({ owner_id, session_id, command: `cat ${path}` });
   }
 
   private async handleCloseSession(args: any) {
-    const user_id = getUserId(args.user_id);
+    const owner_id = getUserId(args.owner_id);
     const { session_id } = args;
-    const key = `${user_id}:${session_id}`;
+    const key = `${owner_id}:${session_id}`;
 
-    await fetch(`${API_BASE}/api/sessions/${user_id}/${session_id}`, {
+    await fetch(`${API_BASE}/api/sessions/${owner_id}/${session_id}`, {
       method: "DELETE",
     });
     sessions.delete(key);

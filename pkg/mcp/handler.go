@@ -145,7 +145,7 @@ func (h *Handler) handleWriteFile(ctx context.Context, args map[string]any) (*mc
 
 	cmd := fmt.Sprintf("cat > '%s' << 'STRATA_EOF'\n%s\nSTRATA_EOF", path, content)
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    sc.OwnerID,
+		"owner_id":    sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    cmd,
 	})
@@ -163,7 +163,7 @@ func (h *Handler) handleReadFile(ctx context.Context, args map[string]any) (*mcp
 	}
 
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    sc.OwnerID,
+		"owner_id":    sc.OwnerID,
 		"session_id": sc.SessionID,
 		"command":    fmt.Sprintf("cat %s", path),
 	})

@@ -82,7 +82,7 @@ test_create_session() {
     local resp
     resp=$(curl -s -X POST "${BASE_URL}/api/sessions" \
         -H "Content-Type: application/json" \
-        -d "{\"user_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}\"}")
+        -d "{\"owner_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}\"}")
 
     if echo "$resp" | grep -q "session_id"; then
         log_pass "创建会话成功: $resp"
@@ -170,7 +170,7 @@ test_websocket() {
     # 先创建一个新 session（因为之前的已关闭）
     curl -s -X POST "${BASE_URL}/api/sessions" \
         -H "Content-Type: application/json" \
-        -d "{\"user_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}_ws\"}" > /dev/null
+        -d "{\"owner_id\": \"${TEST_USER}\", \"session_id\": \"${TEST_SESSION}_ws\"}" > /dev/null
 
     # 测试 WebSocket 升级（不使用 curl，用 nc 或其他工具）
     if command -v websocat &> /dev/null; then

@@ -17,7 +17,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name:    "args provided",
 			ctx:     context.Background(),
-			args:    map[string]any{"user_id": "u1", "session_id": "s1"},
+			args:    map[string]any{"owner_id": "u1", "session_id": "s1"},
 			wantUID: "u1",
 			wantSID: "s1",
 			wantErr: false,
@@ -25,7 +25,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name:    "args empty strings",
 			ctx:     context.Background(),
-			args:    map[string]any{"user_id": "", "session_id": ""},
+			args:    map[string]any{"owner_id": "", "session_id": ""},
 			wantErr: true,
 		},
 		{
@@ -37,7 +37,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name: "context overrides empty args",
 			ctx: ContextWithScarf(context.Background(), Scarf{OwnerID: "ctx_u1", SessionID: "ctx_s1"}),
-			args: map[string]any{"user_id": "", "session_id": ""},
+			args: map[string]any{"owner_id": "", "session_id": ""},
 			wantUID: "ctx_u1",
 			wantSID: "ctx_s1",
 			wantErr: false,
@@ -45,7 +45,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name:    "context overrides partial args",
 			ctx:     ContextWithScarf(context.Background(), Scarf{OwnerID: "ctx_u1", SessionID: ""}),
-			args:    map[string]any{"user_id": "", "session_id": "args_s1"},
+			args:    map[string]any{"owner_id": "", "session_id": "args_s1"},
 			wantUID: "ctx_u1",
 			wantSID: "args_s1",
 			wantErr: false,
@@ -53,7 +53,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name: "context takes precedence over args",
 			ctx:  ContextWithScarf(context.Background(), Scarf{OwnerID: "ctx_u1", SessionID: "ctx_s1"}),
-			args: map[string]any{"user_id": "args_u1", "session_id": "args_s1"},
+			args: map[string]any{"owner_id": "args_u1", "session_id": "args_s1"},
 			wantUID: "ctx_u1",
 			wantSID: "ctx_s1",
 			wantErr: false,
@@ -61,7 +61,7 @@ func TestParseScarfFromArgs(t *testing.T) {
 		{
 			name:    "non-string types ignored",
 			ctx:     context.Background(),
-			args:    map[string]any{"user_id": 123, "session_id": nil},
+			args:    map[string]any{"owner_id": 123, "session_id": nil},
 			wantErr: true,
 		},
 	}

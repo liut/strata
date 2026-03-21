@@ -15,10 +15,10 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
-				"user_id":    map[string]string{"type": "string", "description": "用户标识"},
+				"owner_id":    map[string]string{"type": "string", "description": "用户标识"},
 				"session_id": map[string]string{"type": "string", "description": "会话标识"},
 			},
-			Required: []string{"user_id", "session_id"},
+			Required: []string{"owner_id", "session_id"},
 		},
 	}, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return h.handleCreateSession(ctx, request.GetArguments())
@@ -30,12 +30,12 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
-				"user_id":    map[string]string{"type": "string", "description": "用户标识"},
+				"owner_id":    map[string]string{"type": "string", "description": "用户标识"},
 				"session_id": map[string]string{"type": "string", "description": "会话标识"},
 				"command":    map[string]string{"type": "string", "description": "Shell 命令"},
 				"timeout_ms": map[string]any{"type": "number", "description": "超时毫秒", "default": float64(30000)},
 			},
-			Required: []string{"user_id", "session_id", "command"},
+			Required: []string{"owner_id", "session_id", "command"},
 		},
 	}, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return h.handleExec(ctx, request.GetArguments())
@@ -47,12 +47,12 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
-				"user_id":    map[string]string{"type": "string", "description": "用户标识"},
+				"owner_id":    map[string]string{"type": "string", "description": "用户标识"},
 				"session_id": map[string]string{"type": "string", "description": "会话标识"},
 				"path":       map[string]string{"type": "string", "description": "文件路径"},
 				"content":    map[string]string{"type": "string", "description": "文件内容"},
 			},
-			Required: []string{"user_id", "session_id", "path", "content"},
+			Required: []string{"owner_id", "session_id", "path", "content"},
 		},
 	}, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return h.handleWriteFile(ctx, request.GetArguments())
@@ -64,11 +64,11 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
-				"user_id":    map[string]string{"type": "string", "description": "用户标识"},
+				"owner_id":    map[string]string{"type": "string", "description": "用户标识"},
 				"session_id": map[string]string{"type": "string", "description": "会话标识"},
 				"path":       map[string]string{"type": "string", "description": "文件路径"},
 			},
-			Required: []string{"user_id", "session_id", "path"},
+			Required: []string{"owner_id", "session_id", "path"},
 		},
 	}, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return h.handleReadFile(ctx, request.GetArguments())
@@ -80,10 +80,10 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 		InputSchema: mcp.ToolInputSchema{
 			Type: "object",
 			Properties: map[string]any{
-				"user_id":    map[string]string{"type": "string", "description": "用户标识"},
+				"owner_id":    map[string]string{"type": "string", "description": "用户标识"},
 				"session_id": map[string]string{"type": "string", "description": "会话标识"},
 			},
-			Required: []string{"user_id", "session_id"},
+			Required: []string{"owner_id", "session_id"},
 		},
 	}, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return h.handleCloseSession(ctx, request.GetArguments())

@@ -106,7 +106,7 @@ async function main() {
   await test("create_session", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "create_session",
-      arguments: { user_id: USER, session_id: SESSION },
+      arguments: { owner_id: USER, session_id: SESSION },
     });
     if (!resp.result?.content?.[0]?.text) {
       throw new Error("No session created");
@@ -118,7 +118,7 @@ async function main() {
   await test("exec pwd", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "exec",
-      arguments: { user_id: USER, session_id: SESSION, command: "pwd" },
+      arguments: { owner_id: USER, session_id: SESSION, command: "pwd" },
     });
     if (!resp.result?.content?.[0]?.text) {
       throw new Error("No output");
@@ -157,7 +157,7 @@ async function main() {
   await test("close_session", async () => {
     const resp = await mcpRequest("tools/call", {
       name: "close_session",
-      arguments: { user_id: USER, session_id: SESSION },
+      arguments: { owner_id: USER, session_id: SESSION },
     });
     if (!resp.result?.content) {
       throw new Error("Close failed");

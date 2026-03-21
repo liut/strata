@@ -11,7 +11,7 @@ type Scarf struct {
 	SessionID string
 }
 
-// GetKey returns "userID:sessionID" format key
+// GetKey returns "ownerID:sessionID" format key
 func (s Scarf) GetKey() string {
 	return s.OwnerID + ":" + s.SessionID
 }
@@ -31,11 +31,11 @@ func ScarfFromContex(ctx context.Context) (Scarf, bool) {
 	return Scarf{}, false
 }
 
-// ParseScarfFromArgs 从 args 中提取 user_id 和 session_id，
+// ParseScarfFromArgs 从 args 中提取 owner_id 和 session_id，
 // 并用 context 中已存在的 Scarf 值覆盖（如果 Scarf 非空）
 func ParseScarfFromArgs(ctx context.Context, args map[string]any) (Scarf, error) {
 	sc := Scarf{
-		OwnerID:   getStringArg(args, "user_id"),
+		OwnerID:   getStringArg(args, "owner_id"),
 		SessionID: getStringArg(args, "session_id"),
 	}
 
@@ -49,7 +49,7 @@ func ParseScarfFromArgs(ctx context.Context, args map[string]any) (Scarf, error)
 	}
 
 	if sc.OwnerID == "" || sc.SessionID == "" {
-		return sc, fmt.Errorf("user_id and session_id are required")
+		return sc, fmt.Errorf("owner_id and session_id are required")
 	}
 
 	return sc, nil

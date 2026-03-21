@@ -100,7 +100,7 @@ func main() {
 		return
 	}
 
-	// 发送第一个消息（包含 user_id/session_id）
+	// 发送第一个消息（包含 owner_id/session_id）
 	if err := stream.Send(&pb.ShellInput{
 		OwnerID:   *userID,
 		SessionID: *sessID,

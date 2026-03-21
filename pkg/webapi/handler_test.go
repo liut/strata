@@ -116,7 +116,7 @@ func TestHandleCreateSession(t *testing.T) {
 	})
 	h := NewHandler(m).(*handlerImpl)
 
-	body := `{"user_id": "testuser", "session_id": "test123"}`
+	body := `{"owner_id": "testuser", "session_id": "test123"}`
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", "/api/sessions", bytes.NewBufferString(body))
 	r.Header.Set("Content-Type", "application/json")
@@ -139,7 +139,7 @@ func TestHandleCreateSessionInvalidBody(t *testing.T) {
 	h := NewHandler(m).(*handlerImpl)
 
 	// 缺少 session_id
-	body := `{"user_id": "testuser"}`
+	body := `{"owner_id": "testuser"}`
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", "/api/sessions", bytes.NewBufferString(body))
 	r.Header.Set("Content-Type", "application/json")
@@ -163,7 +163,7 @@ func TestHandleCloseSession(t *testing.T) {
 	h := NewHandler(m).(*handlerImpl)
 
 	// 先创建
-	body := `{"user_id": "testuser", "session_id": "test-close"}`
+	body := `{"owner_id": "testuser", "session_id": "test-close"}`
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", "/api/sessions", bytes.NewBufferString(body))
 	r.Header.Set("Content-Type", "application/json")
