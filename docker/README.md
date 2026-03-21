@@ -25,6 +25,7 @@ docker-compose up -d
 # Or manually
 docker run -d --name strata --privileged \
   --cap-add=SYS_ADMIN --device=/dev/fuse \
+  -m 1g \
   -p 2280:2280 -v strata-sessions:/tmp/strata/sessions \
   strata:runtime
 ```
