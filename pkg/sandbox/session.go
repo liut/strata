@@ -87,7 +87,6 @@ func (s *Session) Read(buf []byte) (int, error) {
 		s.lastHit = time.Now()
 		s.mu.Unlock()
 	}
-	slog.Debug("read", "n", n)
 	return n, err
 }
 
