@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/liut/strata/pkg/identity"
 )
 
 var upgrader = websocket.Upgrader{
@@ -34,10 +35,9 @@ type wsMessage struct {
 //	  {"type":"output", "data":"<shell output>"}
 //	  {"type":"error",  "data":"session closed"}
 func (h *handlerImpl) handleShellWS(w http.ResponseWriter, r *http.Request) {
-	userID := r.PathValue("uid")
-	sessID := r.PathValue("sid")
-	if userID == "" || sessID == "" {
-		http.Error(w, "uid and sid are required", http.StatusBadRequest)
+	sc, err := identity.ParseScarf(r.Context(), r.PathValue, identity.FromHeader(r.Header))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -48,7 +48,7 @@ func (h *handlerImpl) handleShellWS(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	sess, err := h.manager.GetOrCreate(userID, sessID)
+	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 	if err != nil {
 		_ = sendWSMsg(conn, wsMessage{Type: "error", Data: err.Error()})
 		return

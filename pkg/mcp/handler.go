@@ -7,17 +7,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/liut/strata/pkg/identity"
 	"github.com/liut/strata/pkg/sandbox"
 	"github.com/liut/strata/pkg/webapi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
-)
-
-const (
-	// HeaderOwnerID is the HTTP header for owner identity.
-	HeaderOwnerID = "X-Owner-Id"
-	// HeaderSessionID is the HTTP header for session identity.
-	HeaderSessionID = "X-Session-Id"
 )
 
 // Router 注册 MCP 路由
@@ -61,9 +55,9 @@ func (h *Handler) Route(mux webapi.Handler) {
 }
 
 func builtContextFromRequest(ctx context.Context, r *http.Request) context.Context {
-	return ContextWithScarf(ctx, Scarf{
-		OwnerID:   r.Header.Get(HeaderOwnerID),
-		SessionID: r.Header.Get(HeaderSessionID),
+	return identity.ContextWithScarf(ctx, identity.Scarf{
+		OwnerID:   r.Header.Get(identity.HeaderOwnerID),
+		SessionID: r.Header.Get(identity.HeaderSessionID),
 	})
 }
 

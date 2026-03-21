@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/liut/strata/pkg/identity"
 )
 
 // ExecRequest 非交互式命令执行请求
@@ -28,11 +30,9 @@ type ExecResponse struct {
 //	POST /api/sessions/{uid}/{sid}/exec
 //	Body: {"command":"ls -la","timeout_ms":5000}
 func (h *handlerImpl) handleExec(w http.ResponseWriter, r *http.Request) {
-	uid := r.PathValue("uid")
-	sid := r.PathValue("sid")
-
-	if uid == "" || sid == "" {
-		jsonError(w, "uid and sid are required", http.StatusBadRequest)
+	sc, err := identity.ParseScarf(r.Context(), r.PathValue, identity.FromHeader(r.Header))
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -49,7 +49,7 @@ func (h *handlerImpl) handleExec(w http.ResponseWriter, r *http.Request) {
 		req.TimeoutMs = 30000
 	}
 
-	sess, err := h.manager.GetOrCreate(uid, sid)
+	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return

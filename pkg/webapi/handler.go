@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/liut/strata/pkg/identity"
 	"github.com/liut/strata/pkg/sandbox"
 )
 
@@ -40,12 +41,21 @@ func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request
 		OwnerID   string `json:"owner_id"`
 		SessionID string `json:"session_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OwnerID == "" || req.SessionID == "" {
-		jsonError(w, "invalid request: owner_id and session_id required", http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	s, err := h.manager.GetOrCreate(req.OwnerID, req.SessionID)
+	sc, err := identity.ParseScarf(r.Context(), identity.FromArgs(map[string]any{
+		"owner_id":   req.OwnerID,
+		"session_id": req.SessionID,
+	}), identity.FromHeader(r.Header))
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -60,10 +70,13 @@ func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request
 
 // handleCloseSession 关闭 session
 func (h *handlerImpl) handleCloseSession(w http.ResponseWriter, r *http.Request) {
-	uid := r.PathValue("uid")
-	sid := r.PathValue("sid")
+	sc, err := identity.ParseScarf(r.Context(), r.PathValue, identity.FromHeader(r.Header))
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	if ok := h.manager.Close(uid, sid); !ok {
+	if ok := h.manager.Close(sc.OwnerID, sc.SessionID); !ok {
 		jsonError(w, "session not found", http.StatusNotFound)
 		return
 	}

@@ -117,24 +117,3 @@ func TestContextWithScarf(t *testing.T) {
 	}
 }
 
-func TestGetStringArg(t *testing.T) {
-	tests := []struct {
-		name string
-		args map[string]any
-		key  string
-		want string
-	}{
-		{"string value", map[string]any{"k": "v"}, "k", "v"},
-		{"non-string", map[string]any{"k": 123}, "k", ""},
-		{"nil", map[string]any{"k": nil}, "k", ""},
-		{"missing key", map[string]any{}, "k", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getStringArg(tt.args, tt.key); got != tt.want {
-				t.Errorf("getStringArg() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
