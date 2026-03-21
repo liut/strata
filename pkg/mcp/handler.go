@@ -3,12 +3,18 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/liut/strata/pkg/sandbox"
 	"github.com/liut/strata/pkg/webapi"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+)
+
+const (
+	HeaderUserID    = "X-User-Id"
+	HeaderSessionID = "X-Session-Id"
 )
 
 // Router 注册 MCP 路由
@@ -45,20 +51,27 @@ var _ Router = (*Handler)(nil)
 
 // Route 注册 MCP 路由
 func (h *Handler) Route(mux webapi.Handler) {
-	mux.Handle("/mcp/", server.NewStreamableHTTPServer(h.mcps))
+	mux.Handle("/mcp/", server.NewStreamableHTTPServer(h.mcps,
+		server.WithHTTPContextFunc(builtContextFromRequest),
+	))
+}
+
+func builtContextFromRequest(ctx context.Context, r *http.Request) context.Context {
+	return ContextWithScarf(ctx, Scarf{
+		UserID:    r.Header.Get(HeaderUserID),
+		SessionID: r.Header.Get(HeaderSessionID),
+	})
 }
 
 func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	userID, _ := args["user_id"].(string)
-	sessionID, _ := args["session_id"].(string)
-
-	if userID == "" || sessionID == "" {
-		return mcp.NewToolResultError("user_id and session_id are required"), nil
+	sc, err := ParseScarfFromArgs(ctx, args)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	key := userID + ":" + sessionID
+	key := sc.GetKey()
 	if _, exists := h.sessions[key]; !exists {
-		sess, err := h.manager.GetOrCreate(userID, sessionID)
+		sess, err := h.manager.GetOrCreate(sc.UserID, sc.SessionID)
 		if err != nil {
 			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
 		}
@@ -74,19 +87,21 @@ func (h *Handler) handleCreateSession(ctx context.Context, args map[string]any) 
 }
 
 func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	userID, _ := args["user_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	sc, err := ParseScarfFromArgs(ctx, args)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	command, _ := args["command"].(string)
 	timeoutMs, _ := args["timeout_ms"].(float64)
 
-	if userID == "" || sessionID == "" || command == "" {
-		return mcp.NewToolResultError("user_id, session_id and command are required"), nil
+	if command == "" {
+		return mcp.NewToolResultError("command is required"), nil
 	}
 
 	// 确保 session 存在
-	key := userID + ":" + sessionID
+	key := sc.GetKey()
 	if _, exists := h.sessions[key]; !exists {
-		_, err := h.manager.GetOrCreate(userID, sessionID)
+		_, err := h.manager.GetOrCreate(sc.UserID, sc.SessionID)
 		if err != nil {
 			return mcp.NewToolResultError("create session failed: " + err.Error()), nil
 		}
@@ -97,7 +112,7 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		timeout = int(timeoutMs)
 	}
 
-	sess, ok := h.manager.Get(userID, sessionID)
+	sess, ok := h.manager.Get(sc.UserID, sc.SessionID)
 	if !ok {
 		return mcp.NewToolResultError("session not found"), nil
 	}
@@ -114,49 +129,51 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 }
 
 func (h *Handler) handleWriteFile(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	userID, _ := args["user_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	sc, err := ParseScarfFromArgs(ctx, args)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	path, _ := args["path"].(string)
 	content, _ := args["content"].(string)
 
-	if userID == "" || sessionID == "" || path == "" {
-		return mcp.NewToolResultError("user_id, session_id and path are required"), nil
+	if path == "" {
+		return mcp.NewToolResultError("path is required"), nil
 	}
 
 	cmd := fmt.Sprintf("cat > '%s' << 'STRATA_EOF'\n%s\nSTRATA_EOF", path, content)
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    userID,
-		"session_id": sessionID,
+		"user_id":    sc.UserID,
+		"session_id": sc.SessionID,
 		"command":    cmd,
 	})
 }
 
 func (h *Handler) handleReadFile(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	userID, _ := args["user_id"].(string)
-	sessionID, _ := args["session_id"].(string)
+	sc, err := ParseScarfFromArgs(ctx, args)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
+	}
 	path, _ := args["path"].(string)
 
-	if userID == "" || sessionID == "" || path == "" {
-		return mcp.NewToolResultError("user_id, session_id and path are required"), nil
+	if path == "" {
+		return mcp.NewToolResultError("path is required"), nil
 	}
 
 	return h.handleExec(ctx, map[string]any{
-		"user_id":    userID,
-		"session_id": sessionID,
+		"user_id":    sc.UserID,
+		"session_id": sc.SessionID,
 		"command":    fmt.Sprintf("cat %s", path),
 	})
 }
 
 func (h *Handler) handleCloseSession(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	userID, _ := args["user_id"].(string)
-	sessionID, _ := args["session_id"].(string)
-
-	if userID == "" || sessionID == "" {
-		return mcp.NewToolResultError("user_id and session_id are required"), nil
+	sc, err := ParseScarfFromArgs(ctx, args)
+	if err != nil {
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
-	key := userID + ":" + sessionID
-	if h.manager.Close(userID, sessionID) {
+	key := sc.GetKey()
+	if h.manager.Close(sc.UserID, sc.SessionID) {
 		delete(h.sessions, key)
 		return mcp.NewToolResultText(fmt.Sprintf("Session %s closed", key)), nil
 	}

@@ -31,20 +31,21 @@ function jsonRequest(method: string, params?: any): any {
   return { jsonrpc: "2.0", id: nextId++, method, params };
 }
 
-async function mcpRequest(method: string, params?: any): Promise<any> {
+async function mcpRequest(method: string, params?: any, headers?: Record<string, string>): Promise<any> {
   const req = jsonRequest(method, params);
 
-  const headers: Record<string, string> = {
+  const reqHeaders: Record<string, string> = {
     "Content-Type": "application/json",
+    ...headers,
   };
 
   if (sessionId) {
-    headers["Mcp-Session-Id"] = sessionId;
+    reqHeaders["Mcp-Session-Id"] = sessionId;
   }
 
   const res = await fetch(MCP_URL, {
     method: "POST",
-    headers,
+    headers: reqHeaders,
     body: JSON.stringify(req),
   });
 
@@ -118,6 +119,21 @@ async function main() {
     const resp = await mcpRequest("tools/call", {
       name: "exec",
       arguments: { user_id: USER, session_id: SESSION, command: "pwd" },
+    });
+    if (!resp.result?.content?.[0]?.text) {
+      throw new Error("No output");
+    }
+    console.error(`  ${resp.result.content[0].text}`);
+  });
+
+  // Test 4b: Exec pwd via header-based identity (X-User-Id, X-Session-Id)
+  await test("exec pwd via header identity", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "exec",
+      arguments: { command: "pwd" },
+    }, {
+      "X-User-Id": USER,
+      "X-Session-Id": SESSION,
     });
     if (!resp.result?.content?.[0]?.text) {
       throw new Error("No output");
