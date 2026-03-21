@@ -26,25 +26,25 @@ func (s *Service) Register(grpcServer *grpc.Server) {
 }
 
 func (s *Service) CreateSession(ctx context.Context, req *pb.CreateSessionRequest) (*pb.CreateSessionResponse, error) {
-	sess, err := s.manager.GetOrCreate(req.UserID, req.SessionID)
+	sess, err := s.manager.GetOrCreate(req.OwnerID, req.SessionID)
 	if err != nil {
 		return nil, fmt.Errorf("create session: %w", err)
 	}
 
 	return &pb.CreateSessionResponse{
-		UserID:    sess.UID(),
+		OwnerID:   sess.UID(),
 		SessionID: sess.ID(),
 		CreatedAt: sess.Created().Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }
 
 func (s *Service) CloseSession(ctx context.Context, req *pb.CloseSessionRequest) (*pb.CloseSessionResponse, error) {
-	ok := s.manager.Close(req.UserID, req.SessionID)
+	ok := s.manager.Close(req.OwnerID, req.SessionID)
 	return &pb.CloseSessionResponse{Success: ok}, nil
 }
 
 func (s *Service) Exec(ctx context.Context, req *pb.ExecRequest) (*pb.ExecResponse, error) {
-	sess, err := s.manager.GetOrCreate(req.UserID, req.SessionID)
+	sess, err := s.manager.GetOrCreate(req.OwnerID, req.SessionID)
 	if err != nil {
 		return &pb.ExecResponse{Error: err.Error()}, nil
 	}
@@ -78,7 +78,7 @@ func (s *Service) Shell(stream pb.SandboxService_ShellServer) error {
 		return err
 	}
 
-	uid := first.UserID
+	uid := first.OwnerID
 	sid := first.SessionID
 	if uid == "" || sid == "" {
 		return fmt.Errorf("user_id and session_id required in first message")

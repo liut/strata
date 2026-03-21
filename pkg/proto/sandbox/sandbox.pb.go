@@ -23,7 +23,7 @@ const (
 
 type CreateSessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserID        string                 `protobuf:"bytes,1,opt,name=userID,proto3" json:"userID,omitempty"`
+	OwnerID       string                 `protobuf:"bytes,1,opt,name=ownerID,proto3" json:"ownerID,omitempty"`
 	SessionID     string                 `protobuf:"bytes,2,opt,name=sessionID,proto3" json:"sessionID,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -59,9 +59,9 @@ func (*CreateSessionRequest) Descriptor() ([]byte, []int) {
 	return file_sandbox_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CreateSessionRequest) GetUserID() string {
+func (x *CreateSessionRequest) GetOwnerID() string {
 	if x != nil {
-		return x.UserID
+		return x.OwnerID
 	}
 	return ""
 }
@@ -75,7 +75,7 @@ func (x *CreateSessionRequest) GetSessionID() string {
 
 type CreateSessionResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserID        string                 `protobuf:"bytes,1,opt,name=userID,proto3" json:"userID,omitempty"`
+	OwnerID       string                 `protobuf:"bytes,1,opt,name=ownerID,proto3" json:"ownerID,omitempty"`
 	SessionID     string                 `protobuf:"bytes,2,opt,name=sessionID,proto3" json:"sessionID,omitempty"`
 	CreatedAt     string                 `protobuf:"bytes,3,opt,name=createdAt,proto3" json:"createdAt,omitempty"` // RFC3339
 	unknownFields protoimpl.UnknownFields
@@ -112,9 +112,9 @@ func (*CreateSessionResponse) Descriptor() ([]byte, []int) {
 	return file_sandbox_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *CreateSessionResponse) GetUserID() string {
+func (x *CreateSessionResponse) GetOwnerID() string {
 	if x != nil {
-		return x.UserID
+		return x.OwnerID
 	}
 	return ""
 }
@@ -135,7 +135,7 @@ func (x *CreateSessionResponse) GetCreatedAt() string {
 
 type CloseSessionRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserID        string                 `protobuf:"bytes,1,opt,name=userID,proto3" json:"userID,omitempty"`
+	OwnerID       string                 `protobuf:"bytes,1,opt,name=ownerID,proto3" json:"ownerID,omitempty"`
 	SessionID     string                 `protobuf:"bytes,2,opt,name=sessionID,proto3" json:"sessionID,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -171,9 +171,9 @@ func (*CloseSessionRequest) Descriptor() ([]byte, []int) {
 	return file_sandbox_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *CloseSessionRequest) GetUserID() string {
+func (x *CloseSessionRequest) GetOwnerID() string {
 	if x != nil {
-		return x.UserID
+		return x.OwnerID
 	}
 	return ""
 }
@@ -239,7 +239,7 @@ func (x *CloseSessionResponse) GetMessage() string {
 
 type ExecRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserID        string                 `protobuf:"bytes,1,opt,name=userID,proto3" json:"userID,omitempty"`
+	OwnerID       string                 `protobuf:"bytes,1,opt,name=ownerID,proto3" json:"ownerID,omitempty"`
 	SessionID     string                 `protobuf:"bytes,2,opt,name=sessionID,proto3" json:"sessionID,omitempty"`
 	Command       string                 `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`
 	TimeoutMs     int32                  `protobuf:"varint,4,opt,name=timeoutMs,proto3" json:"timeoutMs,omitempty"` // 0 表示使用服务默认值（30s）
@@ -277,9 +277,9 @@ func (*ExecRequest) Descriptor() ([]byte, []int) {
 	return file_sandbox_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ExecRequest) GetUserID() string {
+func (x *ExecRequest) GetOwnerID() string {
 	if x != nil {
-		return x.UserID
+		return x.OwnerID
 	}
 	return ""
 }
@@ -375,7 +375,7 @@ func (x *ExecResponse) GetError() string {
 
 type ShellInput struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
-	UserID    string                 `protobuf:"bytes,1,opt,name=userID,proto3" json:"userID,omitempty"`
+	OwnerID   string                 `protobuf:"bytes,1,opt,name=ownerID,proto3" json:"ownerID,omitempty"`
 	SessionID string                 `protobuf:"bytes,2,opt,name=sessionID,proto3" json:"sessionID,omitempty"`
 	// Types that are valid to be assigned to Payload:
 	//
@@ -416,9 +416,9 @@ func (*ShellInput) Descriptor() ([]byte, []int) {
 	return file_sandbox_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *ShellInput) GetUserID() string {
+func (x *ShellInput) GetOwnerID() string {
 	if x != nil {
-		return x.UserID
+		return x.OwnerID
 	}
 	return ""
 }
@@ -675,22 +675,22 @@ var File_sandbox_proto protoreflect.FileDescriptor
 
 const file_sandbox_proto_rawDesc = "" +
 	"\n" +
-	"\rsandbox.proto\x12\asandbox\"L\n" +
-	"\x14CreateSessionRequest\x12\x16\n" +
-	"\x06userID\x18\x01 \x01(\tR\x06userID\x12\x1c\n" +
-	"\tsessionID\x18\x02 \x01(\tR\tsessionID\"k\n" +
-	"\x15CreateSessionResponse\x12\x16\n" +
-	"\x06userID\x18\x01 \x01(\tR\x06userID\x12\x1c\n" +
+	"\rsandbox.proto\x12\asandbox\"N\n" +
+	"\x14CreateSessionRequest\x12\x18\n" +
+	"\aownerID\x18\x01 \x01(\tR\aownerID\x12\x1c\n" +
+	"\tsessionID\x18\x02 \x01(\tR\tsessionID\"m\n" +
+	"\x15CreateSessionResponse\x12\x18\n" +
+	"\aownerID\x18\x01 \x01(\tR\aownerID\x12\x1c\n" +
 	"\tsessionID\x18\x02 \x01(\tR\tsessionID\x12\x1c\n" +
-	"\tcreatedAt\x18\x03 \x01(\tR\tcreatedAt\"K\n" +
-	"\x13CloseSessionRequest\x12\x16\n" +
-	"\x06userID\x18\x01 \x01(\tR\x06userID\x12\x1c\n" +
+	"\tcreatedAt\x18\x03 \x01(\tR\tcreatedAt\"M\n" +
+	"\x13CloseSessionRequest\x12\x18\n" +
+	"\aownerID\x18\x01 \x01(\tR\aownerID\x12\x1c\n" +
 	"\tsessionID\x18\x02 \x01(\tR\tsessionID\"J\n" +
 	"\x14CloseSessionResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
-	"\amessage\x18\x02 \x01(\tR\amessage\"{\n" +
-	"\vExecRequest\x12\x16\n" +
-	"\x06userID\x18\x01 \x01(\tR\x06userID\x12\x1c\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"}\n" +
+	"\vExecRequest\x12\x18\n" +
+	"\aownerID\x18\x01 \x01(\tR\aownerID\x12\x1c\n" +
 	"\tsessionID\x18\x02 \x01(\tR\tsessionID\x12\x18\n" +
 	"\acommand\x18\x03 \x01(\tR\acommand\x12\x1c\n" +
 	"\ttimeoutMs\x18\x04 \x01(\x05R\ttimeoutMs\"t\n" +
@@ -698,10 +698,10 @@ const file_sandbox_proto_rawDesc = "" +
 	"\x06output\x18\x01 \x01(\tR\x06output\x12\x18\n" +
 	"\aelapsed\x18\x02 \x01(\tR\aelapsed\x12\x1c\n" +
 	"\ttruncated\x18\x03 \x01(\bR\ttruncated\x12\x14\n" +
-	"\x05error\x18\x04 \x01(\tR\x05error\"\x98\x01\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\x9a\x01\n" +
 	"\n" +
-	"ShellInput\x12\x16\n" +
-	"\x06userID\x18\x01 \x01(\tR\x06userID\x12\x1c\n" +
+	"ShellInput\x12\x18\n" +
+	"\aownerID\x18\x01 \x01(\tR\aownerID\x12\x1c\n" +
 	"\tsessionID\x18\x02 \x01(\tR\tsessionID\x12\x1e\n" +
 	"\tstdinData\x18\x03 \x01(\fH\x00R\tstdinData\x12)\n" +
 	"\x06resize\x18\x04 \x01(\v2\x0f.sandbox.ResizeH\x00R\x06resizeB\t\n" +

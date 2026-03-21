@@ -55,19 +55,19 @@ func main() {
 	// 测试 CreateSession
 	fmt.Println("--- Test: CreateSession ---")
 	createResp, err := client.CreateSession(ctx, &pb.CreateSessionRequest{
-		UserID:    *userID,
+		OwnerID:   *userID,
 		SessionID: *sessID,
 	})
 	if err != nil {
 		log.Printf("CreateSession error: %v", err)
 	} else {
-		fmt.Printf("Created: %s/%s\n", createResp.UserID, createResp.SessionID)
+		fmt.Printf("Created: %s/%s\n", createResp.OwnerID, createResp.SessionID)
 	}
 
 	// 测试 Exec
 	fmt.Println("\n--- Test: Exec ---")
 	execResp, err := client.Exec(ctx, &pb.ExecRequest{
-		UserID:    *userID,
+		OwnerID:   *userID,
 		SessionID: *sessID,
 		Command:   "echo 'hello from grpc exec' && pwd",
 		TimeoutMs: 10000,
@@ -102,7 +102,7 @@ func main() {
 
 	// 发送第一个消息（包含 user_id/session_id）
 	if err := stream.Send(&pb.ShellInput{
-		UserID:    *userID,
+		OwnerID:   *userID,
 		SessionID: *sessID,
 	}); err != nil {
 		log.Printf("Send initial error: %v", err)
@@ -204,7 +204,7 @@ func main() {
 	// 测试 CloseSession
 	fmt.Println("\n--- Test: CloseSession ---")
 	closeResp, err := client.CloseSession(ctx, &pb.CloseSessionRequest{
-		UserID:    *userID,
+		OwnerID:   *userID,
 		SessionID: *sessID,
 	})
 	if err != nil {

@@ -27,18 +27,18 @@ service SandboxService {
 // ─────────────────────────────────────────
 
 message CreateSessionRequest {
-  string userID    = 1;
+  string ownerID   = 1;
   string sessionID = 2;
 }
 
 message CreateSessionResponse {
-  string userID    = 1;
+  string ownerID   = 1;
   string sessionID = 2;
   string createdAt = 3; // RFC3339
 }
 
 message CloseSessionRequest {
-  string userID    = 1;
+  string ownerID   = 1;
   string sessionID = 2;
 }
 
@@ -52,7 +52,7 @@ message CloseSessionResponse {
 // ─────────────────────────────────────────
 
 message ExecRequest {
-  string userID    = 1;
+  string ownerID   = 1;
   string sessionID = 2;
   string command   = 3;
   int32  timeoutMs  = 4; // 0 表示使用服务默认值（30s）
@@ -70,7 +70,7 @@ message ExecResponse {
 // ─────────────────────────────────────────
 
 message ShellInput {
-  string userID    = 1;
+  string ownerID   = 1;
   string sessionID = 2;
 
   oneof payload {

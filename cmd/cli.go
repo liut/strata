@@ -65,7 +65,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 
 	// Create session first
 	_, err = client.CreateSession(ctx, &pb.CreateSessionRequest{
-		UserID:    cliUser,
+		OwnerID:   cliUser,
 		SessionID: cliSession,
 	})
 	if err != nil {
@@ -80,7 +80,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 
 	// Send initial message with session info
 	if err := stream.Send(&pb.ShellInput{
-		UserID:    cliUser,
+		OwnerID:   cliUser,
 		SessionID: cliSession,
 	}); err != nil {
 		return fmt.Errorf("failed to send initial message: %w", err)
@@ -181,7 +181,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 
 	// Close session
 	_, _ = client.CloseSession(ctx, &pb.CloseSessionRequest{
-		UserID:    cliUser,
+		OwnerID:   cliUser,
 		SessionID: cliSession,
 	})
 

@@ -1,5 +1,5 @@
 .SILENT:
-.PHONY: help gen proto clean dist build vet lint
+.PHONY: help gen-rpc clean dist build vet lint
 
 NAME:=strata
 ROOF:=github.com/liut/strata
@@ -15,7 +15,7 @@ LDFLAGS:=-X $(ROOF)/pkg/config.Version=$(VERSION)
 
 help:
 	@echo "Usage:"
-	@echo "  make gen          - Generate protobuf code"
+	@echo "  make gen-rpc      - Generate protobuf code"
 	@echo "  make dist         - Build for all platforms"
 	@echo "  make dist VERSION=xxx - Build with custom version"
 	@echo "  make build        - Build for local platform"
@@ -23,13 +23,13 @@ help:
 
 PROTO_DIR:=pkg/proto/sandbox
 
-gen proto:
+gen-rpc:
 	cd $(PROTO_DIR) && protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		sandbox.proto
 
 vet:
-	echo "Checking ./pkg/... ./cmd/... , with GOMOD=$(GOMOD)"
+	echo "Checking ./... , with GOMOD=$(GOMOD)"
 	GO111MODULE=$(GOMOD) $(GO) vet -all ./pkg/...
 
 lint:

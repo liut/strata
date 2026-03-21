@@ -37,15 +37,15 @@ func (h *handlerImpl) Route(mux Handler) {
 // handleCreateSession 创建或复用 session
 func (h *handlerImpl) handleCreateSession(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		UserID    string `json:"user_id"`
+		OwnerID   string `json:"user_id"`
 		SessionID string `json:"session_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.UserID == "" || req.SessionID == "" {
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.OwnerID == "" || req.SessionID == "" {
 		jsonError(w, "invalid request: user_id and session_id required", http.StatusBadRequest)
 		return
 	}
 
-	s, err := h.manager.GetOrCreate(req.UserID, req.SessionID)
+	s, err := h.manager.GetOrCreate(req.OwnerID, req.SessionID)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
