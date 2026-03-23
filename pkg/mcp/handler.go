@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -22,7 +21,7 @@ type Router interface {
 // Handler 处理 MCP 工具调用
 type Handler struct {
 	manager *sandbox.Manager
-	mcps   *server.MCPServer
+	mcps    *server.MCPServer
 }
 
 // NewHandler creates a new MCP handler.
@@ -84,9 +83,4 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		output = "(empty output)"
 	}
 	return mcp.NewToolResultText(output), nil
-}
-
-func (h *Handler) handleStats(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {
-	stats := h.manager.Stats()
-	return mcp.NewToolResultText(fmt.Sprintf("Active sessions: %d", stats["active_sessions"])), nil
 }

@@ -101,8 +101,6 @@ class StrataMCPServer {
         switch (name) {
           case "strata_exec":
             return this.handleExec(args);
-          case "strata_stats":
-            return this.handleStats();
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -149,17 +147,6 @@ class StrataMCPServer {
     };
   }
 
-  private async handleStats() {
-    const stats = await apiCall<any>("/api/stats");
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(stats, null, 2),
-        },
-      ],
-    };
-  }
 }
 
 // Start the server

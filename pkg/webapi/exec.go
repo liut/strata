@@ -83,7 +83,7 @@ func ExecInSession(sess SessionExecuter, cmd string, timeout time.Duration) (str
 	marker := fmt.Sprintf("__STRATA_EXEC_END_%s__", sess.ID())
 	fullCmd := cmd + "; echo '" + marker + "'\n"
 
-	slog.Debug("executing", "cmd", cmd)
+	slog.Debug("executing", "cmd", cmd, "timeout", timeout.String())
 
 	if _, err := sess.Write([]byte(fullCmd)); err != nil {
 		return "", false, fmt.Errorf("write to session failed: %w", err)
@@ -102,6 +102,7 @@ func ExecInSession(sess SessionExecuter, cmd string, timeout time.Duration) (str
 		}
 		n, err := sess.Read(readBuf)
 		if err != nil {
+			slog.Info("read fail", "err", err)
 			return "", false, fmt.Errorf("read from session failed: %w", err)
 		}
 		buf.Write(readBuf[:n])

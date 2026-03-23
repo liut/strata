@@ -142,18 +142,6 @@ async function main() {
     console.error(`  ${resp.result.content[0].text}`);
   });
 
-  // Test 6: Stats
-  await test("stats", async () => {
-    const resp = await mcpRequest("tools/call", {
-      name: "stats",
-      arguments: {},
-    });
-    if (!resp.result?.content?.[0]?.text) {
-      throw new Error("No stats");
-    }
-    console.error(`  ${resp.result.content[0].text}`);
-  });
-
   // Summary
   console.error("");
   console.error(`=== Results: ${passed} passed, ${failed} failed ===`);
