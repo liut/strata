@@ -13,12 +13,13 @@ import (
 
 // Service 实现 gRPC 服务
 type Service struct {
-	manager *sandbox.Manager
+	manager      *sandbox.Manager
+	shellTimeout time.Duration
 	pb.UnimplementedSandboxServiceServer
 }
 
-func NewService(manager *sandbox.Manager) *Service {
-	return &Service{manager: manager}
+func NewService(manager *sandbox.Manager, shellTimeout time.Duration) *Service {
+	return &Service{manager: manager, shellTimeout: shellTimeout}
 }
 
 func (s *Service) Register(grpcServer *grpc.Server) {
@@ -49,7 +50,7 @@ func (s *Service) Exec(ctx context.Context, req *pb.ExecRequest) (*pb.ExecRespon
 		return &pb.ExecResponse{Error: err.Error()}, nil
 	}
 
-	timeout := 30000
+	timeout := int(s.shellTimeout.Milliseconds())
 	if req.TimeoutMs > 0 {
 		timeout = int(req.TimeoutMs)
 	}

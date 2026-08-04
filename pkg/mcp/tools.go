@@ -18,7 +18,7 @@ func SetupTools(srv *server.MCPServer, h *Handler) {
 				"owner_id":   map[string]string{"type": "string", "description": "User identifier"},
 				"session_id": map[string]string{"type": "string", "description": "Session identifier"},
 				"command":    map[string]string{"type": "string", "description": "Shell command"},
-				"timeout_ms": map[string]any{"type": "number", "description": "Timeout in milliseconds", "default": float64(30000)},
+				"timeout_ms": map[string]any{"type": "number", "description": "Timeout in milliseconds", "default": float64(h.shellTimeout.Milliseconds())},
 			},
 			Required: []string{"command"},
 		},

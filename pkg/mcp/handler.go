@@ -20,16 +20,18 @@ type Router interface {
 
 // Handler 处理 MCP 工具调用
 type Handler struct {
-	manager *sandbox.Manager
-	mcps    *server.MCPServer
+	manager      *sandbox.Manager
+	mcps         *server.MCPServer
+	shellTimeout time.Duration
 }
 
 // NewHandler creates a new MCP handler.
-func NewHandler(manager *sandbox.Manager, name, version string) *Handler {
+func NewHandler(manager *sandbox.Manager, name, version string, shellTimeout time.Duration) *Handler {
 	mcpsvr := server.NewMCPServer(name, version)
 	h := &Handler{
-		manager: manager,
-		mcps:    mcpsvr,
+		manager:      manager,
+		mcps:         mcpsvr,
+		shellTimeout: shellTimeout,
 	}
 	SetupTools(mcpsvr, h)
 	return h
@@ -63,7 +65,7 @@ func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.Cal
 		return mcp.NewToolResultError("command is required"), nil
 	}
 
-	timeout := 30000
+	timeout := int(h.shellTimeout.Milliseconds())
 	if timeoutMs > 0 {
 		timeout = int(timeoutMs)
 	}

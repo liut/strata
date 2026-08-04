@@ -88,6 +88,7 @@ npx tsx scripts/strata-mcp.ts
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `STRATA_SERVER_ADDR` | `:2280` | 监听地址 (HOST:PORT 合并) |
+| `STRATA_SERVER_SHELL_TIMEOUT` | `30s` | 命令执行默认超时 (HTTP/MCP exec) |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | 会话目录 |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | 会话超时 |
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大会话数 |

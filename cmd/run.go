@@ -93,14 +93,14 @@ func serveAll(addr string, manager *sandbox.Manager) error {
 	handler.Route(httpMux)
 
 	// MCP 服务
-	mcpHandler := mcp.NewHandler(manager, config.Current.Name, config.Version)
+	mcpHandler := mcp.NewHandler(manager, config.Current.Name, config.Version, config.Current.Server.ShellTimeout)
 	mcpHandler.Route(httpMux)
 
 	httpServer := &http.Server{Handler: loggingMiddleware(httpMux, slog.Default())}
 
 	// gRPC 服务
 	grpcServer := grpc.NewServer()
-	rpcSvc := rpc.NewService(manager)
+	rpcSvc := rpc.NewService(manager, config.Current.Server.ShellTimeout)
 	rpcSvc.Register(grpcServer)
 
 	// 使用 errgroup 管理服务

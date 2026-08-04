@@ -9,13 +9,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/liut/strata/pkg/config"
 	"github.com/liut/strata/pkg/identity"
 )
 
 // ExecRequest 非交互式命令执行请求
 type ExecRequest struct {
 	Command   string `json:"command"`
-	TimeoutMs int    `json:"timeout_ms"` // 默认 30000
+	TimeoutMs int    `json:"timeout_ms"` // 默认 STRATA_SERVER_SHELL_TIMEOUT
 }
 
 // ExecResponse 命令执行结果
@@ -46,7 +47,7 @@ func (h *handlerImpl) handleExec(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.TimeoutMs <= 0 {
-		req.TimeoutMs = 30000
+		req.TimeoutMs = int(config.Current.Server.ShellTimeout.Milliseconds())
 	}
 
 	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)

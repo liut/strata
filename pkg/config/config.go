@@ -18,6 +18,9 @@ type Config struct {
 type ServerConfig struct {
 	Addr      string `envconfig:"ADDR" default:":2280" desc:"HTTP/WS listen address"`
 	AccessLog string `envconfig:"ACCESS_LOG" desc:"Access log file path, empty for stdout"`
+
+	// ShellTimeout 非交互式命令执行（HTTP exec / MCP exec）的默认超时
+	ShellTimeout time.Duration `envconfig:"SHELL_TIMEOUT" default:"30s" desc:"Default timeout for shell command execution (HTTP/MCP exec)"`
 }
 
 type SandboxConfig struct {

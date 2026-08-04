@@ -88,6 +88,7 @@ npx tsx scripts/strata-mcp.ts
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `STRATA_SERVER_ADDR` | `:2280` | Listen address (HOST:PORT combined) |
+| `STRATA_SERVER_SHELL_TIMEOUT` | `30s` | Default shell command timeout (HTTP/MCP exec) |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session directory |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | Session timeout |
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max sessions |
