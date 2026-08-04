@@ -76,11 +76,11 @@ async function test(name: string, fn: () => Promise<void>): Promise<void> {
 }
 
 async function main() {
-  console.error("=== Strata MCP Test ===");
-  console.error(`URL: ${MCP_URL}`);
-  console.error(`User: ${USER}`);
-  console.error(`Session: ${SESSION}`);
-  console.error("");
+  console.warn("=== Strata MCP Test ===");
+  console.warn(`URL: ${MCP_URL}`);
+  console.warn(`User: ${USER}`);
+  console.warn(`Session: ${SESSION}`);
+  console.warn("");
 
   // Test 1: Initialize
   await test("initialize", async () => {
