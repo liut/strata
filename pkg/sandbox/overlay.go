@@ -13,7 +13,7 @@ type OverlayDriver string
 // OverlayDriver defines the overlay filesystem implementation.
 const (
 	DriverFuse   OverlayDriver = "fuse"   // fuse-overlayfs（无 root，推荐）
-	DriverKernel OverlayDriver = "kernel" // 内核 overlayfs in user namespace（Linux ≥ 5.11）
+	DriverKernel OverlayDriver = "kernel" // 内核 overlayfs in user namespace（Linux ≥ 5.11，挂载随 bwrap 在同一 namespace 内完成）
 	DriverNone   OverlayDriver = "none"   // 降级：纯 bwrap + tmpfs，无持久层
 )
 
@@ -24,8 +24,9 @@ type OverlayMount struct {
 	Work   string // workdir：overlayfs 内部工作目录
 	Merged string // 挂载点：合并后的完整文件系统视图
 
-	driver OverlayDriver
-	active bool
+	driver         OverlayDriver
+	active         bool
+	kernelDeferred bool // kernel 模式下挂载被延迟到 bwrap 的 userns wrapper 内完成
 }
 
 // Mount 根据配置的 driver 执行挂载
@@ -80,24 +81,34 @@ func (o *OverlayMount) mountFuse() error {
 	return nil
 }
 
-// mountKernel 在 user namespace 内挂载内核 overlayfs（需 Linux ≥ 5.11）
+// mountKernel 挂载内核 overlayfs，区分两种运行环境：
 //
-//	unshare --user --mount --map-root-user \
-//	  mount -t overlay overlay \
-//	    -o lowerdir=...,upperdir=...,workdir=... <merged>
+//   - 具备 CAP_SYS_ADMIN（通常是 root，如 privileged 容器）：直接 mount，
+//     挂载留在当前 mount namespace，可被后续 bwrap 直接绑定，也便于 mount 排查。
+//   - 非 root / 无 CAP_SYS_ADMIN：不在此挂载，延迟到 buildBwrapWithOverlay 生成的
+//     unshare --user --mount 命令内，与 bwrap 同 namespace 挂载并存活整个会话。
 func (o *OverlayMount) mountKernel() error {
-	script := fmt.Sprintf(
-		"mount -t overlay overlay -o lowerdir=%s,upperdir=%s,workdir=%s %s",
-		o.Lower, o.Upper, o.Work, o.Merged,
-	)
-	out, err := exec.Command(
-		"unshare", "--user", "--mount", "--map-root-user",
-		"sh", "-c", script,
-	).CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("strata/overlay: kernel overlay failed: %w\n%s", err, out)
+	if os.Geteuid() == 0 {
+		opts := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", o.Lower, o.Upper, o.Work)
+		out, err := exec.Command("mount", "-t", "overlay", "overlay", "-o", opts, o.Merged).CombinedOutput()
+		if err == nil {
+			return nil
+		}
+		slog.Warn("kernel overlay direct mount failed, deferring to userns wrapper",
+			"error", err, "output", string(out))
 	}
+	o.kernelDeferred = true
 	return nil
+}
+
+// kernelMountScript 返回内核 overlay 挂载命令。
+// 该命令在 bwrap 所在的 user+mount namespace 内执行，挂载随 bwrap 生命周期存活：
+//
+//	mount -t overlay overlay \
+//	  -o lowerdir=...,upperdir=...,workdir=... <merged>
+func (o *OverlayMount) kernelMountScript() string {
+	return fmt.Sprintf("mount -t overlay overlay -o lowerdir=%s,upperdir=%s,workdir=%s %s",
+		o.Lower, o.Upper, o.Work, o.Merged)
 }
 
 // Umount 卸载 overlay
@@ -107,7 +118,20 @@ func (o *OverlayMount) Umount() error {
 	}
 	o.active = false
 
-	// 优先使用 fusermount（fuse 驱动），fallback 到 umount -l
+	if o.kernelDeferred {
+		// 挂载位于 bwrap 的 user+mount namespace 内，bwrap 退出时随 namespace 自动卸载
+		return nil
+	}
+
+	// kernel 直接挂载：直接用 umount -l（不走 fusermount）
+	if o.driver == DriverKernel {
+		if err := exec.Command("umount", "-l", o.Merged).Run(); err != nil {
+			return fmt.Errorf("strata/overlay: umount failed: %w", err)
+		}
+		return nil
+	}
+
+	// fuse 驱动：优先使用 fusermount，fallback 到 umount -l
 	if err := exec.Command("fusermount", "-u", o.Merged).Run(); err != nil {
 		if err2 := exec.Command("umount", "-l", o.Merged).Run(); err2 != nil {
 			return fmt.Errorf("strata/overlay: umount failed: fusermount: %v, umount: %v", err, err2)

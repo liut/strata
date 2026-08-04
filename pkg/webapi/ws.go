@@ -46,7 +46,7 @@ func (h *handlerImpl) handleShellWS(w http.ResponseWriter, r *http.Request) {
 		slog.Error("WebSocket upgrade error", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
 	if err != nil {
@@ -61,7 +61,7 @@ func (h *handlerImpl) handleShellWS(w http.ResponseWriter, r *http.Request) {
 			n, err := sess.Read(buf)
 			if err != nil {
 				_ = sendWSMsg(conn, wsMessage{Type: "error", Data: "session closed"})
-				conn.Close()
+				_ = conn.Close()
 				return
 			}
 			if err := sendWSMsg(conn, wsMessage{Type: "output", Data: string(buf[:n])}); err != nil {

@@ -46,7 +46,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	client := pb.NewSandboxServiceClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())

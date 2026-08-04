@@ -172,6 +172,8 @@ func TestHandleCloseSession(t *testing.T) {
 	// 再关闭
 	w = httptest.NewRecorder()
 	r, _ = http.NewRequest("DELETE", "/api/sessions/testuser/test-close", nil)
+	r.SetPathValue("uid", "testuser")
+	r.SetPathValue("sid", "test-close")
 
 	h.handleCloseSession(w, r)
 
@@ -195,6 +197,8 @@ func TestHandleExecValidation(t *testing.T) {
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", "/api/sessions/user/sid/exec", bytes.NewBufferString(body))
 	r.Header.Set("Content-Type", "application/json")
+	r.SetPathValue("uid", "user")
+	r.SetPathValue("sid", "sid")
 
 	h.handleExec(w, r)
 

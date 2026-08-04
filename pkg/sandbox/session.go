@@ -29,8 +29,9 @@ type Session struct {
 	lastHit time.Time
 
 	overlay *OverlayMount
-	ptmx    *os.File  // PTY 主端（服务侧）
-	cmd     *exec.Cmd // bwrap 进程
+	ptmx    *os.File   // PTY 主端（服务侧）
+	cmd     *exec.Cmd  // bwrap 进程
+	waitCh  chan error // 进程 Wait 结果通道（由 startShell 的探测 goroutine 填充）
 
 	// 保存重启 bwrap 所需的信息
 	sessionRoot string
@@ -169,31 +170,35 @@ func (s *Session) RestartBwrap() error {
 	homeDir := filepath.Join(s.sessionRoot, s.owner, s.id, "home")
 
 	if s.overlay.active && s.overlay.Merged != "" {
-		cmd = buildBwrapWithOverlay(s.overlay.Merged, homeDir, s.isolateNet)
+		cmd = buildBwrapWithOverlay(s.overlay, homeDir, s.isolateNet)
 	} else {
 		cmd = buildBwrapFallback(homeDir, s.isolateNet)
 	}
 
-	// 设置 stderr 捕获
 	stderrBuf := &bytes.Buffer{}
 	cmd.Stderr = stderrBuf
 
 	slog.Debug("RestartBwrap: starting bwrap", "args", cmd.Args)
 
-	// 启动新的 bwrap 进程
-	ptmx, err := pty.Start(cmd)
+	// 启动新的 bwrap 进程并做存活探测
+	ptmx, alive, waitCh, err := startShell(cmd, stderrBuf)
 	if err != nil {
 		return fmt.Errorf("failed to start bwrap: %w", err)
+	}
+	if !alive {
+		_ = ptmx.Close()
+		return fmt.Errorf("bwrap exited immediately: %s", stderrBuf.String())
 	}
 
 	// 关闭旧的 ptmx
 	if s.ptmx != nil {
-		s.ptmx.Close()
+		_ = s.ptmx.Close()
 	}
 
 	// 更新 session
 	s.ptmx = ptmx
 	s.cmd = cmd
+	s.waitCh = waitCh
 	s.lastHit = time.Now()
 
 	// 启动新的 waitExit goroutine
@@ -206,7 +211,13 @@ func (s *Session) RestartBwrap() error {
 // waitExit 监听 bwrap 进程退出，但不清理 overlay（overlay 独立于 bwrap 进程生命周期）
 // 这样即使 bwrap 退出，只要 overlay 还在，session 就可以复用
 func (s *Session) waitExit() {
-	err := s.cmd.Wait()
+	var err error
+	if s.waitCh != nil {
+		// 由 startShell 的探测 goroutine 执行 Wait，这里只接收结果
+		err = <-s.waitCh
+	} else {
+		err = s.cmd.Wait()
+	}
 
 	// 读取 stderr
 	stderr := ""
@@ -221,8 +232,14 @@ func (s *Session) waitExit() {
 	if s.cmd.ProcessState != nil {
 		exitCode = s.cmd.ProcessState.ExitCode()
 	}
-	slog.Info("bwrap exited (overlay still mounted)", "session", s.id, "error", err,
-		"exitCode", exitCode, "stderr", stderr)
+
+	// kernel 延迟挂载模式下，overlay 挂在 bwrap 的 namespace 内，进程退出即随 namespace 消失
+	overlayStatus := "still mounted"
+	if s.overlay != nil && s.overlay.kernelDeferred {
+		overlayStatus = "unmounted with namespace"
+	}
+	slog.Info("bwrap exited", "session", s.id, "error", err,
+		"exitCode", exitCode, "stderr", stderr, "overlay", overlayStatus)
 
 	// 不调用 Close，让 overlay 继续存在
 	// session 会在 Manager 中保持，直到明确被删除或者 overlay 失败
@@ -239,6 +256,28 @@ type sessionOptions struct {
 	baseRootfs  string // Manager 初始化好的 base rootfs
 	driver      OverlayDriver
 	isolateNet  bool
+}
+
+// startShell 启动 shell 命令并探测 100ms 内是否立即退出（如 kernel 模式 overlay 挂载失败）。
+// 返回 PTY、进程是否存活，以及 Wait 结果通道（由 waitExit 消费；存活进程退出后探测
+// goroutine 会把 Wait 结果写入该通道）。
+func startShell(cmd *exec.Cmd, stderr *bytes.Buffer) (ptmx *os.File, alive bool, waitCh chan error, err error) {
+	cmd.Stderr = stderr
+	ptmx, err = pty.Start(cmd)
+	if err != nil {
+		return nil, false, nil, err
+	}
+
+	waitCh = make(chan error, 1)
+	go func() { waitCh <- cmd.Wait() }()
+
+	select {
+	case <-waitCh:
+		// 100ms 内退出：进程已由探测 goroutine 回收，ProcessState 可用
+		return ptmx, false, waitCh, nil
+	case <-time.After(100 * time.Millisecond):
+		return ptmx, true, waitCh, nil
+	}
 }
 
 func newSession(opts sessionOptions) (*Session, error) {
@@ -276,20 +315,16 @@ func newSession(opts sessionOptions) (*Session, error) {
 			slog.Warn("overlay mount failed, falling back to tmpfs mode", "error", err)
 			cmd = buildBwrapFallback(homeDir, opts.isolateNet)
 		} else {
-			cmd = buildBwrapWithOverlay(overlay.Merged, homeDir, opts.isolateNet)
+			cmd = buildBwrapWithOverlay(overlay, homeDir, opts.isolateNet)
 		}
 	}
 
-	// 设置 stderr 捕获
 	stderrBuf := &bytes.Buffer{}
 	cmd.Stderr = stderrBuf
 
-	slog.Debug("starting bwrap",
-		"driver", opts.driver,
-		"args", cmd.Args,
-		"dir", cmd.Dir)
+	slog.Debug("starting bwrap", "driver", opts.driver, "args", cmd.Args, "dir", cmd.Dir)
 
-	ptmx, err := pty.Start(cmd)
+	ptmx, alive, waitCh, err := startShell(cmd, stderrBuf)
 	if err != nil {
 		slog.Error("pty.Start failed", "error", err, "cmd", cmd.Args)
 		_ = overlay.Cleanup()
@@ -297,39 +332,28 @@ func newSession(opts sessionOptions) (*Session, error) {
 	}
 	slog.Debug("pty.Start succeeded", "pid", cmd.Process.Pid)
 
-	// 检查 bwrap 进程是否立即退出
-	if cmd.Process == nil {
-		slog.Error("bwrap process nil after start")
-		_ = ptmx.Close()
-		_ = overlay.Cleanup()
-		return nil, fmt.Errorf("strata/session: bwrap process nil")
-	}
-
-	// 等待一下，检测 bwrap 是否立即退出（bwrap 在某些环境下会有问题）
-	time.Sleep(100 * time.Millisecond)
-	if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-		slog.Warn("bwrap exited immediately, trying bwrap fallback (no overlay)",
+	// 探测 100ms 内是否立即退出（如 kernel 模式 overlay 挂载失败），
+	// 立即退出则依次降级：overlay → bwrap fallback(tmpfs) → unshare fallback
+	if !alive {
+		slog.Warn("shell exited immediately, falling back to tmpfs mode",
 			"exitCode", cmd.ProcessState.ExitCode(),
 			"stderr", stderrBuf.String())
 		_ = ptmx.Close()
-		_ = overlay.Cleanup()
+		_ = overlay.Umount() // 只卸载不清理目录，fallback 还要复用 home
 
 		// 尝试用不带 overlay 的 bwrap fallback
 		cmd = buildBwrapFallback(homeDir, opts.isolateNet)
 		stderrBuf = &bytes.Buffer{}
 		cmd.Stderr = stderrBuf
 		slog.Debug("starting bwrap fallback", "args", cmd.Args)
-		ptmx, err = pty.Start(cmd)
+		ptmx, alive, waitCh, err = startShell(cmd, stderrBuf)
 		if err != nil {
 			slog.Error("bwrap fallback pty.Start failed", "error", err)
+			_ = overlay.Cleanup()
 			return nil, fmt.Errorf("strata/session: bwrap fallback pty start: %w", err)
 		}
-		slog.Debug("bwrap fallback pty.Start succeeded", "pid", cmd.Process.Pid)
-
-		// 等待 bwrap fallback
-		time.Sleep(100 * time.Millisecond)
-		if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
-			slog.Warn("bwrap fallback also failed, trying unshare fallback",
+		if !alive {
+			slog.Warn("bwrap fallback also exited immediately, trying unshare fallback",
 				"exitCode", cmd.ProcessState.ExitCode(),
 				"stderr", stderrBuf.String())
 			_ = ptmx.Close()
@@ -338,20 +362,18 @@ func newSession(opts sessionOptions) (*Session, error) {
 			cmd = buildUnshareFallback(homeDir, opts.isolateNet)
 			stderrBuf = &bytes.Buffer{}
 			cmd.Stderr = stderrBuf
-			ptmx, err = pty.Start(cmd)
+			ptmx, alive, waitCh, err = startShell(cmd, stderrBuf)
 			if err != nil {
 				slog.Error("unshare fallback pty.Start failed", "error", err)
+				_ = overlay.Cleanup()
 				return nil, fmt.Errorf("strata/session: unshare fallback pty start: %w", err)
 			}
-			slog.Debug("unshare fallback pty.Start succeeded", "pid", cmd.Process.Pid)
-
-			// 等待 unshare
-			time.Sleep(100 * time.Millisecond)
-			if cmd.ProcessState != nil && cmd.ProcessState.Exited() {
+			if !alive {
 				slog.Error("unshare fallback also failed",
 					"exitCode", cmd.ProcessState.ExitCode(),
 					"stderr", stderrBuf.String())
 				_ = ptmx.Close()
+				_ = overlay.Cleanup()
 				return nil, fmt.Errorf("strata/session: unshare fallback exited with code %d", cmd.ProcessState.ExitCode())
 			}
 		}
@@ -371,6 +393,7 @@ func newSession(opts sessionOptions) (*Session, error) {
 		sessionRoot: opts.sessionRoot,
 		driver:      opts.driver,
 		isolateNet:  opts.isolateNet,
+		waitCh:      waitCh,
 		done:        make(chan struct{}),
 	}
 
@@ -378,8 +401,12 @@ func newSession(opts sessionOptions) (*Session, error) {
 	return s, nil
 }
 
-// buildBwrapWithOverlay 以完整 overylay merged 目录作为新根
-func buildBwrapWithOverlay(mergedRoot, homeDir string, isolateNet bool) *exec.Cmd {
+// buildBwrapWithOverlay 以完整 overlay merged 目录作为新根
+//
+// 自动探测 base rootfs：若其为最小 rootfs（仅自动生成的 bash + 依赖库），把宿主/容器的
+// /bin /lib /sbin /usr 只读绑定到 merged 之上以提供用户空间；若为完整文件系统则不绑定，
+// 获得完整隔离。
+func buildBwrapWithOverlay(ov *OverlayMount, homeDir string, isolateNet bool) *exec.Cmd {
 	bash := findBash()
 
 	// 按用户测试成功的顺序：先绑定系统目录，再绑定 overlay
@@ -393,21 +420,22 @@ func buildBwrapWithOverlay(mergedRoot, homeDir string, isolateNet bool) *exec.Cm
 	//       -- bash
 	// overlay 根目录（放在最前面，后续的 ro-bind 会补充系统目录）
 	args := []string{
-		"--bind", mergedRoot, "/",
+		"--bind", ov.Merged, "/",
 	}
 
 	// 系统目录（在 merged 绑定之后，可以补充/覆盖 merged 中的目录）
-	// 只绑定实际存在的目录（如 Alpine 没有 /lib64）
-	args = append(args,
-		"--ro-bind", "/bin", "/bin",
-		"--ro-bind", "/lib", "/lib",
-		"--ro-bind", "/sbin", "/sbin",
-		"--ro-bind", "/usr", "/usr",
-	)
+	if !rootfsHasUserspace(ov.Lower) {
+		args = append(args,
+			"--ro-bind", "/bin", "/bin",
+			"--ro-bind", "/lib", "/lib",
+			"--ro-bind", "/sbin", "/sbin",
+			"--ro-bind", "/usr", "/usr",
+		)
 
-	// /lib64 可能在某些发行版不存在（如 Alpine）
-	if pathExists("/lib64") {
-		args = append(args, "--ro-bind", "/lib64", "/lib64")
+		// /lib64 可能在某些发行版不存在（如 Alpine）
+		if pathExists("/lib64") {
+			args = append(args, "--ro-bind", "/lib64", "/lib64")
+		}
 	}
 
 	// proc/dev/tmpfs/home、网络配置
@@ -432,6 +460,19 @@ func buildBwrapWithOverlay(mergedRoot, homeDir string, isolateNet bool) *exec.Cm
 		"--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/sbin",
 		"--", bash,
 	)
+
+	if ov.driver == DriverKernel && ov.kernelDeferred {
+		// kernel 模式：overlay 挂载必须与 bwrap 处于同一个 user+mount namespace 才会存活。
+		// 在 unshare 出来的 namespace 里先执行挂载，再 exec bwrap；进程 exec 后
+		// namespace 由 bwrap 继承，挂载在整个会话期间持续有效。
+		// 只有非 root/无 CAP_SYS_ADMIN（mountKernel 未直接挂载成功）时才需要此包装。
+		script := ov.kernelMountScript() + ` && exec "$@"`
+		args = append([]string{
+			"--user", "--mount", "--map-root-user",
+			"sh", "-c", script, "sh", "bwrap",
+		}, args...)
+		return exec.Command("unshare", args...)
+	}
 
 	return exec.Command("bwrap", args...)
 }
@@ -552,6 +593,17 @@ func pathExists(p string) bool {
 	return err == nil
 }
 
+// rootfsHasUserspace 判断 base rootfs 是否为完整用户空间（而非仅自动生成的 bash + 依赖库）。
+// 完整 rootfs 至少应包含 /bin/sh、/usr/bin/env、/bin/ls 之一；最小 rootfs 只有 /bin/bash。
+func rootfsHasUserspace(rootfs string) bool {
+	for _, rel := range []string{"bin/sh", "usr/bin/env", "bin/ls"} {
+		if pathExists(filepath.Join(rootfs, rel)) {
+			return true
+		}
+	}
+	return false
+}
+
 // ensureBashInRootfs 确保 baseRootfs 中包含 /bin/bash
 func ensureBashInRootfs(baseRootfs string) error {
 	// 找到宿主机的 bash
@@ -597,13 +649,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer from.Close()
+	defer func() { _ = from.Close() }()
 
 	to, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer to.Close()
+	defer func() { _ = to.Close() }()
 
 	_, err = io.Copy(to, from)
 	return err

@@ -33,17 +33,17 @@ func TestDefaultConfig(t *testing.T) {
 // TestLoadEnvVars 测试从环境变量加载配置
 func TestLoadEnvVars(t *testing.T) {
 	// 设置环境变量
-	os.Setenv("STRATA_SERVER_ADDR", ":9090")
-	os.Setenv("STRATA_SANDBOX_SESSION_ROOT", "/custom/sessions")
-	os.Setenv("STRATA_SANDBOX_SESSION_TTL", "60m")
-	os.Setenv("STRATA_SANDBOX_MAX_SESSIONS", "50")
-	os.Setenv("STRATA_SANDBOX_OVERLAY_DRIVER", "none")
+	_ = os.Setenv("STRATA_SERVER_ADDR", ":9090")
+	_ = os.Setenv("STRATA_SANDBOX_SESSION_ROOT", "/custom/sessions")
+	_ = os.Setenv("STRATA_SANDBOX_SESSION_TTL", "60m")
+	_ = os.Setenv("STRATA_SANDBOX_MAX_SESSIONS", "50")
+	_ = os.Setenv("STRATA_SANDBOX_OVERLAY_DRIVER", "none")
 	defer func() {
-		os.Unsetenv("STRATA_SERVER_ADDR")
-		os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
-		os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
-		os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
-		os.Unsetenv("STRATA_SANDBOX_OVERLAY_DRIVER")
+		_ = os.Unsetenv("STRATA_SERVER_ADDR")
+		_ = os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
+		_ = os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
+		_ = os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
+		_ = os.Unsetenv("STRATA_SANDBOX_OVERLAY_DRIVER")
 	}()
 
 	cfg, err := Load()
@@ -71,11 +71,11 @@ func TestLoadEnvVars(t *testing.T) {
 // TestLoadDefaults 测试使用默认值（无环境变量）
 func TestLoadDefaults(t *testing.T) {
 	// 确保没有环境变量干扰
-	os.Unsetenv("STRATA_SERVER_ADDR")
-	os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
-	os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
-	os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
-	os.Unsetenv("STRATA_SANDBOX_OVERLAY_DRIVER")
+	_ = os.Unsetenv("STRATA_SERVER_ADDR")
+	_ = os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
+	_ = os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
+	_ = os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
+	_ = os.Unsetenv("STRATA_SANDBOX_OVERLAY_DRIVER")
 
 	cfg, err := Load()
 	if err != nil {

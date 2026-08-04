@@ -13,7 +13,7 @@ type mockSession struct {
 	input *bytes.Buffer
 }
 
-func (m *mockSession) ID() string            { return m.id }
+func (m *mockSession) ID() string { return m.id }
 func (m *mockSession) Read(b []byte) (int, error) {
 	return m.input.Read(b)
 }
@@ -150,7 +150,7 @@ func TestExecInSessionWriteError(t *testing.T) {
 
 type errorWriteSession struct{}
 
-func (e *errorWriteSession) ID() string    { return "err" }
+func (e *errorWriteSession) ID() string { return "err" }
 func (e *errorWriteSession) Read(b []byte) (int, error) {
 	return 0, io.EOF
 }

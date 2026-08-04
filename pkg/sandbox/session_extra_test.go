@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -14,10 +15,10 @@ func TestBuildBwrapWithOverlay(t *testing.T) {
 		t.Skip("bwrap not available, skipping test")
 	}
 
-	cmd := buildBwrapWithOverlay("/merged", "/home", false)
+	cmd := buildBwrapWithOverlay(&OverlayMount{Merged: "/merged", driver: DriverFuse}, "/home", false)
 
-	if cmd.Path != "bwrap" {
-		t.Errorf("cmd.Path = %q, want %q", cmd.Path, "bwrap")
+	if filepath.Base(cmd.Path) != "bwrap" {
+		t.Errorf("cmd.Path = %q, want bwrap", cmd.Path)
 	}
 
 	// 检查必要的参数
@@ -34,7 +35,7 @@ func TestBuildBwrapWithOverlay(t *testing.T) {
 	}
 
 	// 检查网络隔离参数
-	cmdWithNet := buildBwrapWithOverlay("/merged", "/home", true)
+	cmdWithNet := buildBwrapWithOverlay(&OverlayMount{Merged: "/merged", driver: DriverFuse}, "/home", true)
 	argsWithNet := cmdWithNet.Args
 	hasUnshareNet := false
 	for _, arg := range argsWithNet {
@@ -48,6 +49,77 @@ func TestBuildBwrapWithOverlay(t *testing.T) {
 	}
 }
 
+// TestBuildBwrapWithOverlayKernel 测试 kernel 模式生成 unshare+mount+bwrap 命令 - 环境无关
+func TestBuildBwrapWithOverlayKernel(t *testing.T) {
+	ov := &OverlayMount{
+		Lower:          "/lower",
+		Upper:          "/upper",
+		Work:           "/work",
+		Merged:         "/merged",
+		driver:         DriverKernel,
+		kernelDeferred: true,
+	}
+
+	cmd := buildBwrapWithOverlay(ov, "/home", false)
+	if filepath.Base(cmd.Path) != "unshare" {
+		t.Errorf("cmd.Path = %q, want unshare", cmd.Path)
+	}
+
+	joined := strings.Join(cmd.Args, " ")
+	for _, want := range []string{
+		"--user --mount --map-root-user",
+		"mount -t overlay overlay -o lowerdir=/lower,upperdir=/upper,workdir=/work /merged",
+		"exec \"$@\"",
+		"bwrap --bind /merged /",
+	} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("args missing %q: %s", want, joined)
+		}
+	}
+}
+
+// TestBuildBwrapWithOverlayKernelDirect 测试 kernel 模式直接挂载（root/privileged）时不包 unshare - 环境无关
+func TestBuildBwrapWithOverlayKernelDirect(t *testing.T) {
+	ov := &OverlayMount{
+		Merged: "/merged",
+		driver: DriverKernel,
+	}
+
+	cmd := buildBwrapWithOverlay(ov, "/home", false)
+	if filepath.Base(cmd.Path) != "bwrap" {
+		t.Errorf("cmd.Path = %q, want bwrap (direct mount should use plain bwrap)", cmd.Path)
+	}
+}
+
+// TestBuildBwrapWithOverlayRootfsDetection 测试按 base rootfs 内容自动决定是否绑定宿主目录 - 环境无关
+func TestBuildBwrapWithOverlayRootfsDetection(t *testing.T) {
+	minimal := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(minimal, "bin"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(minimal, "bin", "bash"), []byte("x"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	complete := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(complete, "bin"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(complete, "bin", "sh"), []byte("x"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmdMin := buildBwrapWithOverlay(&OverlayMount{Merged: "/m", Lower: minimal, driver: DriverFuse}, "/home", false)
+	if !strings.Contains(strings.Join(cmdMin.Args, " "), "--ro-bind /usr /usr") {
+		t.Error("minimal rootfs should bind host /usr")
+	}
+
+	cmdFull := buildBwrapWithOverlay(&OverlayMount{Merged: "/m", Lower: complete, driver: DriverFuse}, "/home", false)
+	if strings.Contains(strings.Join(cmdFull.Args, " "), "--ro-bind /usr /usr") {
+		t.Error("complete rootfs should not bind host /usr")
+	}
+}
+
 // TestBuildBwrapFallback 测试 buildBwrapFallback 函数 - 环境相关
 func TestBuildBwrapFallback(t *testing.T) {
 	if !CurrentEnv().HasBwrap {
@@ -56,8 +128,8 @@ func TestBuildBwrapFallback(t *testing.T) {
 
 	cmd := buildBwrapFallback("/home", false)
 
-	if cmd.Path != "bwrap" {
-		t.Errorf("cmd.Path = %q, want %q", cmd.Path, "bwrap")
+	if filepath.Base(cmd.Path) != "bwrap" {
+		t.Errorf("cmd.Path = %q, want bwrap", cmd.Path)
 	}
 
 	// 检查必要的参数（应该有 --ro-bind 而不是 --bind）
@@ -178,12 +250,12 @@ func TestNewSessionOptions(t *testing.T) {
 	}
 
 	opts := sessionOptions{
-		ownerID:      "testuser",
-		sessionID:    "testsession",
-		sessionRoot:  tmpDir,
-		baseRootfs: "",
-		driver:       DriverNone,
-		isolateNet:   false,
+		ownerID:     "testuser",
+		sessionID:   "testsession",
+		sessionRoot: tmpDir,
+		baseRootfs:  "",
+		driver:      DriverNone,
+		isolateNet:  false,
 	}
 
 	if opts.ownerID != "testuser" {

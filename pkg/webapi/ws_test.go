@@ -54,7 +54,7 @@ func TestWsMessageResize(t *testing.T) {
 	msg := wsMessage{
 		Type: "resize",
 		Rows: 40,
-		Cols:  120,
+		Cols: 120,
 	}
 
 	data, err := json.Marshal(msg)
@@ -201,8 +201,8 @@ func TestExecResponseFields(t *testing.T) {
 // TestExecResponseTruncatedOmitzero 测试 Truncated 为 false 时使用 omitzero - 环境无关
 func TestExecResponseTruncatedOmitzero(t *testing.T) {
 	resp := ExecResponse{
-		Output:   "test",
-		Elapsed:  "5ms",
+		Output:  "test",
+		Elapsed: "5ms",
 		// Truncated: false - 默认为 false
 	}
 

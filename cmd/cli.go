@@ -58,7 +58,7 @@ func runCLI(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	client := pb.NewSandboxServiceClient(conn)
 	ctx, cancel := context.WithCancel(context.Background())
