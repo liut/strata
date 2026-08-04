@@ -38,12 +38,16 @@ RUN mkdir -p /tmp/strata/sessions && \
 # Note: Running as root because fuse operations require elevated privileges
 # USER nobody
 
-# Default environment variables
+# Default environment variables.
+# pip installs to the user site by default (PEP 668 externally-managed env),
+# so pip CLI scripts land in /root/.local/bin; add it to PATH.
+# npm (Alpine package, prefix=/usr) global bins already live in /usr/bin.
 ENV STRATA_SERVER_ADDR=:2280 \
   STRATA_SANDBOX_SESSION_ROOT=/tmp/strata/sessions \
   STRATA_SANDBOX_SESSION_TTL=30m \
   STRATA_SANDBOX_MAX_SESSIONS=100 \
-  STRATA_SANDBOX_OVERLAY_DRIVER=fuse
+  STRATA_SANDBOX_OVERLAY_DRIVER=fuse \
+  PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Expose port (HTTP + gRPC via cmux)
 EXPOSE 2280

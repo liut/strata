@@ -401,6 +401,11 @@ func newSession(opts sessionOptions) (*Session, error) {
 	return s, nil
 }
 
+// sessionPath 沙箱会话内设置的 PATH。
+// /root/.local/bin 放 pip 等用户级安装的可执行脚本
+// （Alpine 的 Python 是 externally-managed，pip 默认安装到用户目录）。
+const sessionPath = "/root/.local/bin:/usr/local/bin:/usr/bin:/bin:/sbin"
+
 // buildBwrapWithOverlay 以完整 overlay merged 目录作为新根
 //
 // 自动探测 base rootfs：若其为最小 rootfs（仅自动生成的 bash + 依赖库），把宿主/容器的
@@ -416,7 +421,8 @@ func buildBwrapWithOverlay(ov *OverlayMount, homeDir string, isolateNet bool) *e
 	//       --bind homeDir /root --ro-bind /etc/resolv.conf /etc/resolv.conf
 	//       --unshare-pid --unshare-ipc --unshare-uts [--unshare-net]
 	//       --hostname strata --die-with-parent
-	//       --setenv HOME /root --setenv USER root --setenv TERM xterm-256color --setenv PATH ...
+	//       --setenv HOME /root --setenv USER root --setenv TERM xterm-256color \
+	//       --setenv PATH /root/.local/bin:/usr/local/bin:/usr/bin:/bin:/sbin
 	//       -- bash
 	// overlay 根目录（放在最前面，后续的 ro-bind 会补充系统目录）
 	args := []string{
@@ -457,7 +463,7 @@ func buildBwrapWithOverlay(ov *OverlayMount, homeDir string, isolateNet bool) *e
 		"--setenv", "HOME", "/root",
 		"--setenv", "USER", "root",
 		"--setenv", "TERM", "xterm-256color",
-		"--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/sbin",
+		"--setenv", "PATH", sessionPath,
 		"--", bash,
 	)
 
@@ -515,7 +521,7 @@ func buildBwrapFallback(homeDir string, isolateNet bool) *exec.Cmd {
 		"--setenv", "HOME", "/root",
 		"--setenv", "USER", "root",
 		"--setenv", "TERM", "xterm-256color",
-		"--setenv", "PATH", "/usr/local/bin:/usr/bin:/bin:/sbin",
+		"--setenv", "PATH", sessionPath,
 		"--", bash,
 	)
 

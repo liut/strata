@@ -66,6 +66,10 @@ COPY --from=builder /build/strata /opt/bin/strata
 # USER nobody
 
 # Default environment variables
+# pip installs to the user site by default (PEP 668 externally-managed env),
+# so pip CLI scripts land in /root/.local/bin; add it to PATH.
+# npm (Alpine package, prefix=/usr) global bins already live in /usr/bin.
+ENV PATH="/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 ENV STRATA_SERVER_ADDR=:2280
 ENV STRATA_SANDBOX_SESSION_ROOT=/tmp/strata/sessions
 ENV STRATA_SANDBOX_SESSION_TTL=30m

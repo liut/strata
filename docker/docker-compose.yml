@@ -36,6 +36,9 @@ services:
     ports:
       - "2280:2280"  # HTTP + WebSocket + gRPC (via cmux)
     environment:
+      # pip installs to the user site by default (PEP 668 externally-managed),
+      # so /root/.local/bin (pip CLI scripts) must stay on PATH.
+      - PATH=/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - STRATA_SERVER_ADDR=:2280
       - STRATA_SANDBOX_SESSION_ROOT=/tmp/strata/sessions
       - STRATA_SANDBOX_SESSION_TTL=30m
