@@ -26,6 +26,7 @@ docker-compose up -d
 docker run -d --name strata --privileged \
   --cap-add=SYS_ADMIN --device=/dev/fuse \
   -e STRATA_SANDBOX_OVERLAY_DRIVER=kernel \
+  -e STRATA_SERVER_SHELL_TIMEOUT=45s \
   -m 1g \
   -p 2280:2280 -v strata-sessions:/tmp/strata/sessions \
   strata:runtime
