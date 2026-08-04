@@ -97,7 +97,7 @@ func ExecInSession(sess SessionExecuter, cmd string, timeout time.Duration) (str
 
 	for {
 		if time.Now().After(deadline) {
-			slog.Info("timeout", "cmd", cmd)
+			slog.Info("timeout", "cmd", cmd, "dur", timeout)
 			return "", false, fmt.Errorf("command timeout")
 		}
 		n, err := sess.Read(readBuf)

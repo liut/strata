@@ -11,15 +11,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/soheilhy/cmux"
+	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+
 	"github.com/liut/strata/pkg/config"
 	"github.com/liut/strata/pkg/mcp"
 	"github.com/liut/strata/pkg/rpc"
 	"github.com/liut/strata/pkg/sandbox"
 	"github.com/liut/strata/pkg/webapi"
-	"github.com/soheilhy/cmux"
-	"github.com/spf13/cobra"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc"
 )
 
 var runCmd = &cobra.Command{

@@ -14,15 +14,16 @@ import (
 	"sync"
 	"syscall"
 
-	pb "github.com/liut/strata/pkg/proto/sandbox"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+
+	pb "github.com/liut/strata/pkg/proto/sandbox"
 )
 
 var (
-	cliAddr   string
-	cliUser   string
+	cliAddr    string
+	cliUser    string
 	cliSession string
 )
 
@@ -34,7 +35,7 @@ var cliCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(cliCmd)
+	rootCmd.AddCommand(cliCmd)
 
 	cliCmd.Flags().StringVar(&cliAddr, "addr", "localhost:2280", "server address")
 	cliCmd.Flags().StringVar(&cliUser, "user", "testuser", "user id")
