@@ -6,7 +6,7 @@
 
 ## Features
 
-- **Lightweight**: Linux Namespace + bubblewrap + fuse-overlayfs
+- **Lightweight**: Linux Namespace + bubblewrap + overlayfs (fuse-overlayfs or kernel overlay)
 - **Isolated**: Per-user + per-session with writable overlay layer
 - **Multi-Protocol**: HTTP REST / WebSocket / gRPC / MCP
 - **Persistent**: overlayfs layering, changes don't affect base
@@ -27,7 +27,7 @@
                   │
 ┌─────────────────▼───────────────────────────┐
 │  Isolation Layer                            │
-│  bwrap + overlayfs (fuse-overlayfs)         │
+│  bwrap + overlayfs (fuse / kernel / none)   │
 │  ├── PID/IPC/UTS Namespace                  │
 │  ├── overlay: lower + upper + merged        │
 │  └── PTY (pseudo-terminal)                  │
@@ -53,7 +53,7 @@ make build
 # Create session
 curl -X POST http://localhost:2280/api/sessions \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "alice", "session_id": "task-001"}'
+  -d '{"owner_id": "alice", "session_id": "task-001"}'
 
 # Execute command
 curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
@@ -141,12 +141,18 @@ meson _builddir
 meson compile -C _builddir
 meson test -C _builddir
 sudo meson install -C _builddir
-sudo setcap cap_sys_admin+ip /usr/local/bin/bwrap
 ```
+
+> **Note**: do NOT apply file capabilities (`sudo setcap cap_sys_admin+ip ...`) to bwrap —
+> modern bubblewrap rejects that configuration (`Unexpected capabilities but not setuid,
+> old file caps config?`). Non-root use relies on unprivileged user namespaces
+> (Linux ≥ 5.11): enable `kernel.unprivileged_userns_clone=1` on Debian, or allow
+> unprivileged user namespaces on Ubuntu 24.04+ (`kernel.apparmor_restrict_unprivileged_userns=0`).
 
 ### Runtime Requirements
 
 - Linux kernel ≥ 5.11
+- Unprivileged user namespaces (required for non-root bwrap and the `kernel` overlay driver)
 - Go ≥ 1.25 (build only)
 
 MIT

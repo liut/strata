@@ -6,7 +6,7 @@
 
 ## 特性
 
-- **轻量**: Linux Namespace + bubblewrap + fuse-overlayfs
+- **轻量**: Linux Namespace + bubblewrap + overlayfs (fuse-overlayfs 或内核 overlay)
 - **隔离**: 按用户+会话隔离，独立可写层
 - **多协议**: HTTP REST / WebSocket / gRPC / MCP
 - **持久化**: overlayfs 层叠，修改不影响基础镜像
@@ -27,7 +27,7 @@
                   │
 ┌─────────────────▼───────────────────────────┐
 │  Isolation Layer                            │
-│  bwrap + overlayfs (fuse-overlayfs)         │
+│  bwrap + overlayfs (fuse / kernel / none)   │
 │  ├── PID/IPC/UTS Namespace                  │
 │  ├── overlay: lower + upper + merged        │
 │  └── PTY (pseudo-terminal)                  │
@@ -53,7 +53,7 @@ make build
 # 创建会话
 curl -X POST http://localhost:2280/api/sessions \
   -H "Content-Type: application/json" \
-  -d '{"user_id": "alice", "session_id": "task-001"}'
+  -d '{"owner_id": "alice", "session_id": "task-001"}'
 
 # 执行命令
 curl -X POST http://localhost:2280/api/sessions/alice/task-001/exec \
@@ -141,12 +141,18 @@ meson _builddir
 meson compile -C _builddir
 meson test -C _builddir
 sudo meson install -C _builddir
-sudo setcap cap_sys_admin+ip /usr/local/bin/bwrap
 ```
+
+> **注意**：不要给 bwrap 设置文件 capabilities（`sudo setcap cap_sys_admin+ip ...`）——
+> 现代 bubblewrap 会拒绝这种配置（`Unexpected capabilities but not setuid,
+> old file caps config?`）。非 root 使用依赖非特权 user namespace（Linux ≥ 5.11）：
+> Debian 需开启 `kernel.unprivileged_userns_clone=1`；Ubuntu 24.04+ 需放开
+> `kernel.apparmor_restrict_unprivileged_userns`。
 
 ### 运行环境要求
 
 - Linux kernel ≥ 5.11
+- 非特权 user namespace（非 root 运行 bwrap 及 `kernel` overlay 驱动所需）
 - Go ≥ 1.25 (仅编译)
 
 MIT
