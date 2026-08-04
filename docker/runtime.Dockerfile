@@ -19,6 +19,7 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositorie
     git \
     python3 \
     py3-pip \
+    py3-uv \
     nodejs \
     npm \
   && rm -rf /var/cache/apk/*
