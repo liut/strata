@@ -6,7 +6,7 @@ stages:
   - deploy
 
 variables:
-  DEVELOP_HOST: saturn
+  DEVELOP_HOST: moon
   DEPLOY_HOST: earth
   DEPLOY_USER: sa
   DEPLOY_ROOT: /opt/strata
