@@ -89,9 +89,10 @@ Sessions are stored hierarchically under `SESSION_ROOT`:
 
 ```
 SESSION_ROOT/
+├── rootfs/        # shared base root filesystem
 └── userID/
     └── sessionID/
-        ├── home/      # session root filesystem
+        ├── home/      # writable home directory
         ├── upper/     # overlay writable layer
         ├── work/      # overlay work directory
         └── merged/    # overlay merged view
@@ -102,22 +103,22 @@ SESSION_ROOT/
 ### Adding an HTTP Endpoint
 
 1. Add handler in `pkg/webapi/handler.go`
-2. Register route in `Register()`
+2. Register route in `Route()`
 
 ```go
 func (h *handlerImpl) handleHealth(w http.ResponseWriter, r *http.Request) {
     jsonOK(w, map[string]string{"status": "ok"})
 }
 
-func (h *handlerImpl) Register(mux *http.ServeMux) {
-    mux.HandleFunc("GET /health", h.handleHealth)
+func (h *handlerImpl) Route(mux Handler) {
+    mux.Handle("GET /health", http.HandlerFunc(h.handleHealth))
 }
 ```
 
 ### Adding a gRPC Method
 
 1. Define in `pkg/proto/sandbox/sandbox.proto`
-2. Regenerate: `make gen`
+2. Regenerate: `make gen-rpc`
 3. Implement in `pkg/rpc/service.go`
 
 ### Changing Overlay Driver
@@ -127,7 +128,7 @@ func (h *handlerImpl) Register(mux *http.ServeMux) {
 driver := sandbox.OverlayDriver("kernel")
 
 # Or via env
-STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./dist/strata
+STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./dist/strata run
 ```
 
 ### Identity Parsing
@@ -148,15 +149,19 @@ sc, err := identity.ParseScarf(ctx, r.PathValue, identity.FromHeader(r.Header))
 
 ```bash
 go test ./...
-make build && ./dist/strata
+make build && ./dist/strata run
 ./scripts/test-api.sh
 ```
+
+For the macOS Apple Container deployment path, see
+[docs/apple-container.md](./docs/apple-container.md).
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| bwrap: permissions error | Run `sudo setcap cap_sys_admin+ip /usr/bin/bwrap` |
+| bwrap: permissions error on Linux | Verify unprivileged user namespaces; do not apply file capabilities to modern bwrap |
+| bwrap: namespace error in a container | Grant `CAP_SYS_ADMIN` to the container, for example `--cap-add SYS_ADMIN` |
 | overlay mount failed | Try `STRATA_SANDBOX_OVERLAY_DRIVER=none` |
 | session hangs | `pkill -f "bwrap.*sessionID"` |
 

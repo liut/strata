@@ -1,5 +1,5 @@
 .SILENT:
-.PHONY: help gen-rpc clean dist build vet lint
+.PHONY: help gen-rpc clean dist build vet lint package-linux package-linux-arm64
 
 NAME:=strata
 ROOF:=github.com/liut/strata
@@ -18,6 +18,7 @@ help:
 	@echo "  make gen-rpc      - Generate protobuf code"
 	@echo "  make dist         - Build for all platforms"
 	@echo "  make dist VERSION=xxx - Build with custom version"
+	@echo "  make dist/linux_arm64/strata - Build Linux arm64"
 	@echo "  make build        - Build for local platform"
 	@echo "  make clean        - Clean build artifacts"
 
@@ -51,6 +52,10 @@ dist/linux_amd64/$(NAME): $(SOURCES) showver
 	@echo "Building $(NAME) of linux/x64"
 	@mkdir -p dist/linux_amd64 && GO111MODULE=$(GOMOD) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_amd64/$(NAME) .
 
+dist/linux_arm64/$(NAME): $(SOURCES) showver
+	@echo "Building $(NAME) of linux/arm64"
+	@mkdir -p dist/linux_arm64 && GO111MODULE=$(GOMOD) CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS) -s -w" -o dist/linux_arm64/$(NAME) .
+
 dist/darwin_amd64/$(NAME): $(SOURCES) showver
 	@echo "Building $(NAME) of darwin/x64"
 	@mkdir -p dist/darwin_amd64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=amd64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_amd64/$(NAME) .
@@ -59,7 +64,7 @@ dist/darwin_arm64/$(NAME): $(SOURCES) showver
 	@echo "Building $(NAME) of darwin/arm64"
 	@mkdir -p dist/darwin_arm64 && GO111MODULE=$(GOMOD) GOOS=darwin GOARCH=arm64 $(GO) build -ldflags "$(LDFLAGS) -w" -o dist/darwin_arm64/$(NAME) .
 
-dist: vet dist/linux_amd64/$(NAME) dist/darwin_amd64/$(NAME) dist/darwin_arm64/$(NAME)
+dist: vet dist/linux_amd64/$(NAME) dist/linux_arm64/$(NAME) dist/darwin_amd64/$(NAME) dist/darwin_arm64/$(NAME)
 	@echo ""
 	@echo "Build complete:"
 	@ls -la dist/
@@ -67,6 +72,10 @@ dist: vet dist/linux_amd64/$(NAME) dist/darwin_amd64/$(NAME) dist/darwin_arm64/$
 package-linux: dist/linux_amd64/$(NAME)
 	echo "Packaging $(NAME)"
 	ls dist/linux_amd64 | xargs tar -cvJf $(NAME)-linux-amd64-$(DATE)-$(TAG).tar.xz -C dist/linux_amd64
+
+package-linux-arm64: dist/linux_arm64/$(NAME)
+	echo "Packaging $(NAME)"
+	ls dist/linux_arm64 | xargs tar -cvJf $(NAME)-linux-arm64-$(DATE)-$(TAG).tar.xz -C dist/linux_arm64
 
 clean:
 	rm -rf dist

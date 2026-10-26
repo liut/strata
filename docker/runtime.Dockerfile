@@ -2,7 +2,7 @@
 # Runtime-only Dockerfile
 # =============================================================================
 # Use this when you have a pre-built binary (e.g., from `make dist/linux_amd64/strata`)
-# Build: docker build -t strata:runtime -f Dockerfile.runtime .
+# Build: docker build -t strata:runtime -f docker/runtime.Dockerfile .
 # =============================================================================
 FROM alpine:3.22 AS runtime
 
@@ -24,7 +24,8 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositorie
     npm \
   && rm -rf /var/cache/apk/*
 
-# Copy pre-built binary
+# Copy the pre-built amd64 binary. See docs/apple-container.md for the
+# native arm64 build used by Apple Container on Apple silicon.
 COPY dist/linux_amd64/strata /opt/bin/
 
 # Create fuse config to allow non-root access and increase mount limit

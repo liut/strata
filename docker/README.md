@@ -4,27 +4,38 @@
 
 - No `/etc/alternatives` (musl libc)
 - Small footprint (~5MB)
-- Latest bubblewrap via Alpine `edge`
+- Runtime packages are pinned to the Alpine release used by the Dockerfile
 
 ## Build
 
-```bash
-# Build with docker-compose
-docker-compose build
+The runtime image consumes a prebuilt `linux/amd64` binary:
 
-# Or use pre-built binary
+```bash
 make dist/linux_amd64/strata
 docker build -t strata:runtime -f docker/runtime.Dockerfile .
+```
+
+To build the binary and image from source in one stage, use the full build image:
+
+```bash
+docker build -t strata:runtime -f docker/fullbuild.Dockerfile .
+```
+
+The Compose file uses the runtime-only Dockerfile, so build the binary before
+invoking Compose:
+
+```bash
+make dist/linux_amd64/strata
+docker compose build
 ```
 
 ## Run
 
 ```bash
-docker-compose up -d
+docker compose up -d
 
 # Or manually
 docker run -d --name strata --privileged \
-  --cap-add=SYS_ADMIN --device=/dev/fuse \
   -e STRATA_SANDBOX_OVERLAY_DRIVER=kernel \
   -e STRATA_SERVER_SHELL_TIMEOUT=45s \
   -m 1g \
@@ -32,11 +43,15 @@ docker run -d --name strata --privileged \
   strata:runtime
 ```
 
+For macOS without Docker, see the
+[Apple Container guide](../docs/apple-container.md).
+It uses `docker/apple-runtime.Dockerfile` with the native arm64 binary.
+
 ## Required Capabilities
 
 | Capability | Purpose |
 |------------|---------|
-| SYS_ADMIN | overlayfs mount |
+| SYS_ADMIN | bubblewrap namespaces and overlayfs mount |
 | NET_ADMIN | network isolation (optional) |
 | /dev/fuse | fuse-overlayfs |
 
@@ -48,6 +63,12 @@ docker run -d --name strata --privileged \
 | STRATA_SANDBOX_SESSION_ROOT | /tmp/strata/sessions |
 | STRATA_SANDBOX_SESSION_TTL | 30m |
 | PATH | /root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin |
+
+## Troubleshooting
+
+If `docker compose build` reports a missing `dist/linux_amd64/strata`, run
+`make dist/linux_amd64/strata` first. The Compose service uses
+`docker/runtime.Dockerfile`, which copies an existing binary rather than compiling it.
 
 ## pip / npm Install Locations
 

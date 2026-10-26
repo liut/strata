@@ -1,5 +1,7 @@
 # =============================================================================
 # Stage 1: Build Strata binary
+# This Dockerfile targets linux/amd64. For native Apple silicon containers,
+# see docs/apple-container.md.
 # =============================================================================
 FROM --platform=linux/amd64 golang:1.25-alpine AS builder
 

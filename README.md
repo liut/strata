@@ -44,8 +44,12 @@
 make build
 
 # Run
-./dist/strata
+./dist/strata run
 ```
+
+The commands above target Linux because bubblewrap depends on Linux namespaces.
+On Apple silicon with macOS 26 or later, Apple's `container` tool can run the same
+Linux stack without Docker. See [Apple Container](./docs/apple-container.md).
 
 ## Usage
 
@@ -94,7 +98,8 @@ npx tsx scripts/strata-mcp.ts
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max sessions |
 | `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | fuse/kernel/none |
 
-View all: `./dist/strata run --help`
+All settings are loaded from `STRATA_*` environment variables. The table lists the
+most commonly used values.
 
 ## Identity
 
@@ -116,7 +121,7 @@ curl -X POST http://localhost:2280/api/sessions/exec \
 
 Header priority is higher than path values.
 
-## Dependencies
+## Native Linux Dependencies
 
 ### Build Dependencies
 
@@ -154,5 +159,8 @@ sudo meson install -C _builddir
 - Linux kernel ≥ 5.11
 - Unprivileged user namespaces (required for non-root bwrap and the `kernel` overlay driver)
 - Go ≥ 1.25 (build only)
+
+For macOS, use the [Apple Container deployment guide](./docs/apple-container.md).
+It runs the Linux runtime in a lightweight VM and is not a native macOS sandbox backend.
 
 MIT

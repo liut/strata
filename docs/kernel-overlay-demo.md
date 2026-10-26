@@ -14,7 +14,7 @@ strata 的 overlay 驱动 `kernel` 使用内核 overlayfs（而非 fuse-overlayf
 ## 启用
 
 ```bash
-STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./dist/strata
+STRATA_SANDBOX_OVERLAY_DRIVER=kernel ./dist/strata run
 ```
 
 ## 手动演示挂载（非 root 路径）

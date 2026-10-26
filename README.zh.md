@@ -44,8 +44,13 @@
 make build
 
 # 运行
-./dist/strata
+./dist/strata run
 ```
+
+以上命令面向 Linux，因为 bubblewrap 依赖 Linux namespace。
+在 Apple Silicon + macOS 26 及以上环境中，可以使用 Apple 的 `container`
+在不依赖 Docker 的情况下运行同一套 Linux 栈，详见
+[Apple Container 部署指南](./docs/apple-container.zh.md)。
 
 ## 使用
 
@@ -94,7 +99,7 @@ npx tsx scripts/strata-mcp.ts
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大会话数 |
 | `STRATA_SANDBOX_OVERLAY_DRIVER` | `fuse` | fuse/kernel/none |
 
-查看全部: `./dist/strata run --help`
+所有配置均通过 `STRATA_*` 环境变量加载，上表列出常用项。
 
 ## 身份标识
 
@@ -116,7 +121,7 @@ curl -X POST http://localhost:2280/api/sessions/exec \
 
 Header 优先级高于路径参数。
 
-## 依赖
+## Linux 原生依赖
 
 ### 编译依赖
 
@@ -154,5 +159,8 @@ sudo meson install -C _builddir
 - Linux kernel ≥ 5.11
 - 非特权 user namespace（非 root 运行 bwrap 及 `kernel` overlay 驱动所需）
 - Go ≥ 1.25 (仅编译)
+
+macOS 请使用 [Apple Container 部署指南](./docs/apple-container.zh.md)。
+该方式在轻量 Linux VM 中运行现有实现，不是原生 macOS 沙箱后端。
 
 MIT

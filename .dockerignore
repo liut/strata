@@ -10,9 +10,10 @@
 *~
 
 # Build artifacts
-# Note: dist/linux_amd64/strata is needed for runtime.Dockerfile
+# Prebuilt Linux binaries are needed by the runtime and Apple Container images.
 dist/*
 !dist/linux_amd64/
+!dist/linux_arm64/
 bin/
 strata
 strata-*

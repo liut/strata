@@ -4,25 +4,23 @@
 #
 # Build Steps:
 #
-# Option 1: Build everything in one command
-#   docker-compose build
-#
-# Option 2: Build binary first, then runtime image
+# The Compose service uses the runtime-only image, so build the binary first:
 #   make dist/linux_amd64/strata
-#   docker build -t strata-runtime -f runtime.Dockerfile .
+#   docker compose build
 #
 # Run:
-#   docker-compose up -d
+#   docker compose up -d
 #
 # View logs:
-#   docker-compose logs -f
+#   docker compose logs -f
 #
 # Stop:
-#   docker-compose down
+#   docker compose down
 #
 # Notes:
 #   - Requires privileged mode for bubblewrap + fuse-overlayfs
 #   - Session data persists in named volume
+#   - For macOS without Docker, see docs/apple-container.md
 # =============================================================================
 
 services:

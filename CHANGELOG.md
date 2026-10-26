@@ -33,4 +33,5 @@ Initial release of Strata — a lightweight session sandbox providing isolated s
 - Requires Linux kernel ≥ 5.11
 - Runtime deps: `bubblewrap` (bwrap), `fuse-overlayfs`
 - Build dep: Go ≥ 1.25, `meson`, `libcap-dev`
-- bwrap needs `cap_sys_admin` capability (`sudo setcap cap_sys_admin+ip /usr/bin/bwrap`)
+- bwrap needs access to Linux namespaces; do not apply file capabilities to modern bwrap.
+  Containers must grant `CAP_SYS_ADMIN` when bwrap runs inside them.
