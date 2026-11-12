@@ -93,7 +93,7 @@ func serveAll(addr string, manager *sandbox.Manager) error {
 	handler.Route(httpMux)
 
 	// MCP 服务
-	mcpHandler := mcp.NewHandler(manager, config.Current.Name, config.Version, config.Current.Server.ShellTimeout)
+	mcpHandler := mcp.NewHandler(manager, config.Current.Name, config.Version, config.Current.Server.ShellTimeout, config.Current.Server.EditTimeout)
 	mcpHandler.Route(httpMux)
 
 	httpServer := &http.Server{Handler: loggingMiddleware(httpMux, slog.Default())}

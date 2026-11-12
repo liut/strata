@@ -83,6 +83,17 @@ wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
 
 MCP 端点: `http://localhost:2280/mcp/`
 
+| 工具 | 说明 |
+|------|------|
+| `exec` | 在会话 Shell 中执行命令 |
+| `read` | 读取 `/root` 持久工作区中的 UTF-8 文本，可指定行范围 |
+| `write` | 在 `/root` 下创建或原子替换 UTF-8 文件 |
+| `edit` | 执行唯一且不重叠的精确替换，并返回 diff/patch |
+
+文件工具接受相对于会话工作区的路径，也接受 `/root` 下的绝对路径。工作区外路径、
+二进制或非 UTF-8 内容、超过 4 MiB 的文件会被拒绝；`write` 要求父目录已存在。
+参数与匹配规则详见 [MCP 文件工具](./docs/edit-tool.md)。
+
 AI Agent 使用:
 ```bash
 npx tsx scripts/strata-mcp.ts
@@ -94,6 +105,7 @@ npx tsx scripts/strata-mcp.ts
 |------|--------|------|
 | `STRATA_SERVER_ADDR` | `:2280` | 监听地址 (HOST:PORT 合并) |
 | `STRATA_SERVER_SHELL_TIMEOUT` | `30s` | 命令执行默认超时 (HTTP/MCP exec) |
+| `STRATA_SERVER_EDIT_TIMEOUT` | `30s` | MCP edit 调用超时 |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | 会话目录 |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | 会话超时 |
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | 最大会话数 |

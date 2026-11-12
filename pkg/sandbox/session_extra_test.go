@@ -185,6 +185,17 @@ func TestSessionRead(t *testing.T) {
 	}
 }
 
+func TestSessionWorkspacePath(t *testing.T) {
+	s := &Session{
+		id:          "session",
+		owner:       "owner",
+		sessionRoot: "/sessions",
+	}
+	if got, want := s.WorkspacePath(), "/sessions/owner/session/home"; got != want {
+		t.Fatalf("WorkspacePath()=%q, want %q", got, want)
+	}
+}
+
 // TestOverlayMountDefaultDriver 测试默认驱动 - 环境无关
 func TestOverlayMountDefaultDriver(t *testing.T) {
 	o := &OverlayMount{

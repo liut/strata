@@ -68,6 +68,11 @@ func (s *Session) Done() <-chan struct{} {
 	return s.done
 }
 
+// WorkspacePath returns the persistent host directory exposed as /root in the session.
+func (s *Session) WorkspacePath() string {
+	return filepath.Join(s.sessionRoot, s.owner, s.id, "home")
+}
+
 // Write 向 Shell 写入输入数据（用户键盘/指令）
 func (s *Session) Write(data []byte) (int, error) {
 	slog.Debug("writing", "data", len(data))

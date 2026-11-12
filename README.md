@@ -82,6 +82,18 @@ wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
 
 MCP available at `http://localhost:2280/mcp/`
 
+| Tool | Description |
+|------|-------------|
+| `exec` | Run a command in the session shell |
+| `read` | Read UTF-8 text from the persistent `/root` workspace, with optional line ranges |
+| `write` | Create or atomically replace a UTF-8 file under `/root` |
+| `edit` | Apply unique, non-overlapping exact replacements and return a diff/patch |
+
+File tools accept relative paths from the session workspace or absolute paths under
+`/root`. They reject paths outside the workspace, binary or non-UTF-8 content, and
+files larger than 4 MiB. `write` requires the parent directory to exist. See
+[MCP file tools](./docs/edit-tool.md) for argument shapes and edit matching rules.
+
 For AI agents:
 ```bash
 npx tsx scripts/strata-mcp.ts
@@ -93,6 +105,7 @@ npx tsx scripts/strata-mcp.ts
 |----------|---------|-------------|
 | `STRATA_SERVER_ADDR` | `:2280` | Listen address (HOST:PORT combined) |
 | `STRATA_SERVER_SHELL_TIMEOUT` | `30s` | Default shell command timeout (HTTP/MCP exec) |
+| `STRATA_SERVER_EDIT_TIMEOUT` | `30s` | MCP edit timeout |
 | `STRATA_SANDBOX_SESSION_ROOT` | `/tmp/strata/sessions` | Session directory |
 | `STRATA_SANDBOX_SESSION_TTL` | `30m` | Session timeout |
 | `STRATA_SANDBOX_MAX_SESSIONS` | `100` | Max sessions |

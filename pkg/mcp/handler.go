@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -23,15 +24,19 @@ type Handler struct {
 	manager      *sandbox.Manager
 	mcps         *server.MCPServer
 	shellTimeout time.Duration
+	editTimeout  time.Duration
+	fileLocks    *keyedLocker
 }
 
 // NewHandler creates a new MCP handler.
-func NewHandler(manager *sandbox.Manager, name, version string, shellTimeout time.Duration) *Handler {
+func NewHandler(manager *sandbox.Manager, name, version string, shellTimeout, editTimeout time.Duration) *Handler {
 	mcpsvr := server.NewMCPServer(name, version)
 	h := &Handler{
 		manager:      manager,
 		mcps:         mcpsvr,
 		shellTimeout: shellTimeout,
+		editTimeout:  editTimeout,
+		fileLocks:    newKeyedLocker(),
 	}
 	SetupTools(mcpsvr, h)
 	return h
@@ -51,6 +56,18 @@ func builtContextFromRequest(ctx context.Context, r *http.Request) context.Conte
 		OwnerID:   r.Header.Get(identity.HeaderOwnerID),
 		SessionID: r.Header.Get(identity.HeaderSessionID),
 	})
+}
+
+func (h *Handler) sessionForCall(ctx context.Context, args map[string]any) (*sandbox.Session, error) {
+	sc, err := identity.ParseScarf(ctx, identity.FromArgs(args))
+	if err != nil {
+		return nil, err
+	}
+	sess, err := h.manager.GetOrCreate(sc.OwnerID, sc.SessionID)
+	if err != nil {
+		return nil, fmt.Errorf("session failed: %w", err)
+	}
+	return sess, nil
 }
 
 func (h *Handler) handleExec(ctx context.Context, args map[string]any) (*mcp.CallToolResult, error) {

@@ -16,6 +16,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Server.Addr != ":2280" {
 		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":2280")
 	}
+	if cfg.Server.EditTimeout != 30*time.Second {
+		t.Errorf("EditTimeout = %v, want %v", cfg.Server.EditTimeout, 30*time.Second)
+	}
 	if cfg.Sandbox.SessionRoot != "/tmp/strata/sessions" {
 		t.Errorf("SessionRoot = %q, want %q", cfg.Sandbox.SessionRoot, "/tmp/strata/sessions")
 	}
@@ -34,12 +37,14 @@ func TestDefaultConfig(t *testing.T) {
 func TestLoadEnvVars(t *testing.T) {
 	// 设置环境变量
 	_ = os.Setenv("STRATA_SERVER_ADDR", ":9090")
+	_ = os.Setenv("STRATA_SERVER_EDIT_TIMEOUT", "45s")
 	_ = os.Setenv("STRATA_SANDBOX_SESSION_ROOT", "/custom/sessions")
 	_ = os.Setenv("STRATA_SANDBOX_SESSION_TTL", "60m")
 	_ = os.Setenv("STRATA_SANDBOX_MAX_SESSIONS", "50")
 	_ = os.Setenv("STRATA_SANDBOX_OVERLAY_DRIVER", "none")
 	defer func() {
 		_ = os.Unsetenv("STRATA_SERVER_ADDR")
+		_ = os.Unsetenv("STRATA_SERVER_EDIT_TIMEOUT")
 		_ = os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
 		_ = os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
 		_ = os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
@@ -53,6 +58,9 @@ func TestLoadEnvVars(t *testing.T) {
 
 	if cfg.Server.Addr != ":9090" {
 		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":9090")
+	}
+	if cfg.Server.EditTimeout != 45*time.Second {
+		t.Errorf("EditTimeout = %v, want %v", cfg.Server.EditTimeout, 45*time.Second)
 	}
 	if cfg.Sandbox.SessionRoot != "/custom/sessions" {
 		t.Errorf("SessionRoot = %q, want %q", cfg.Sandbox.SessionRoot, "/custom/sessions")
@@ -72,6 +80,7 @@ func TestLoadEnvVars(t *testing.T) {
 func TestLoadDefaults(t *testing.T) {
 	// 确保没有环境变量干扰
 	_ = os.Unsetenv("STRATA_SERVER_ADDR")
+	_ = os.Unsetenv("STRATA_SERVER_EDIT_TIMEOUT")
 	_ = os.Unsetenv("STRATA_SANDBOX_SESSION_ROOT")
 	_ = os.Unsetenv("STRATA_SANDBOX_SESSION_TTL")
 	_ = os.Unsetenv("STRATA_SANDBOX_MAX_SESSIONS")
@@ -86,6 +95,9 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.Server.Addr != ":2280" {
 		t.Errorf("Server.Addr = %q, want %q", cfg.Server.Addr, ":2280")
 	}
+	if cfg.Server.EditTimeout != 30*time.Second {
+		t.Errorf("EditTimeout = %v, want %v", cfg.Server.EditTimeout, 30*time.Second)
+	}
 	if cfg.Sandbox.SessionRoot != "/tmp/strata/sessions" {
 		t.Errorf("SessionRoot = %q, want %q", cfg.Sandbox.SessionRoot, "/tmp/strata/sessions")
 	}
@@ -97,6 +109,13 @@ func TestLoadDefaults(t *testing.T) {
 	}
 	if cfg.Sandbox.OverlayDriver != "fuse" {
 		t.Errorf("OverlayDriver = %q, want %q", cfg.Sandbox.OverlayDriver, "fuse")
+	}
+}
+
+func TestLoadRejectsNonPositiveEditTimeout(t *testing.T) {
+	t.Setenv("STRATA_SERVER_EDIT_TIMEOUT", "0s")
+	if _, err := Load(); err == nil {
+		t.Fatal("expected non-positive edit timeout to fail")
 	}
 }
 

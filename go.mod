@@ -7,9 +7,11 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/mark3labs/mcp-go v0.45.0
+	github.com/pmezard/go-difflib v1.0.0
 	github.com/soheilhy/cmux v0.1.5
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/sync v0.20.0
+	golang.org/x/text v0.23.0
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
 )
@@ -27,7 +29,6 @@ require (
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250324211829-b45e905df463 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

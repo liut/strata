@@ -15,6 +15,8 @@
 const MCP_URL = process.env.STRATA_MCP || "http://localhost:2280/mcp/";
 const USER = "testuser";
 const SESSION = `test-${Date.now()}`;
+const FILE_PATH = `mcp-file-${Date.now()}.txt`;
+const DUPLICATE_FILE_PATH = `mcp-duplicate-${Date.now()}.txt`;
 
 // Colors
 const GREEN = "\x1b[32m";
@@ -97,10 +99,11 @@ async function main() {
   // Test 2: List tools
   await test("tools/list", async () => {
     const resp = await mcpRequest("tools/list");
-    if (!resp.result?.tools?.length) {
-      throw new Error("No tools returned");
+    const names = (resp.result?.tools || []).map((t: any) => t.name).sort();
+    if (names.join(",") !== "edit,exec,read,write") {
+      throw new Error(`Unexpected tools: ${names.join(", ")}`);
     }
-    console.error(`  Found ${resp.result.tools.length} tools: ${resp.result.tools.map((t: any) => t.name).join(", ")}`);
+    console.error(`  Found ${names.length} tools: ${names.join(", ")}`);
   });
 
   // Test 3: Exec pwd (with identity in args)
@@ -140,6 +143,95 @@ async function main() {
       throw new Error("No output");
     }
     console.error(`  ${resp.result.content[0].text}`);
+  });
+
+  await test("write creates a file", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "write",
+      arguments: {
+        owner_id: USER,
+        session_id: SESSION,
+        path: FILE_PATH,
+        content: "- first\n- second\n",
+      },
+    });
+    if (resp.result?.isError || resp.result?.structuredContent?.created !== true) {
+      throw new Error(resp.result?.content?.[0]?.text || "write failed");
+    }
+  });
+
+  let readText = "";
+  await test("read returns exact text", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "read",
+      arguments: { owner_id: USER, session_id: SESSION, path: FILE_PATH },
+    });
+    readText = resp.result?.content?.[0]?.text || "";
+    if (resp.result?.isError || readText !== "- first\n- second\n") {
+      throw new Error(`Unexpected read result: ${readText}`);
+    }
+  });
+
+  await test("edit applies read text", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "edit",
+      arguments: {
+        owner_id: USER,
+        session_id: SESSION,
+        path: `/root/${FILE_PATH}`,
+        edits: [{ oldText: readText, newText: "- first\n- second\n- third\n" }],
+      },
+    });
+    if (resp.result?.isError || !resp.result?.structuredContent?.patch) {
+      throw new Error(resp.result?.content?.[0]?.text || "edit failed");
+    }
+  });
+
+  await test("read returns edited text", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "read",
+      arguments: { owner_id: USER, session_id: SESSION, path: FILE_PATH },
+    });
+    if (resp.result?.isError || resp.result?.content?.[0]?.text !== "- first\n- second\n- third\n") {
+      throw new Error(`Unexpected edited text: ${resp.result?.content?.[0]?.text}`);
+    }
+  });
+
+  await test("file tools reject traversal", async () => {
+    const resp = await mcpRequest("tools/call", {
+      name: "read",
+      arguments: { owner_id: USER, session_id: SESSION, path: "../outside.txt" },
+    });
+    if (!resp.result?.isError || !String(resp.result?.content?.[0]?.text).includes("Path escapes session root")) {
+      throw new Error("Traversal was not rejected");
+    }
+  });
+
+  await test("edit rejects duplicate matches", async () => {
+    const writeResp = await mcpRequest("tools/call", {
+      name: "write",
+      arguments: {
+        owner_id: USER,
+        session_id: SESSION,
+        path: DUPLICATE_FILE_PATH,
+        content: "same\nsame\n",
+      },
+    });
+    if (writeResp.result?.isError) {
+      throw new Error(writeResp.result?.content?.[0]?.text || "write failed");
+    }
+    const resp = await mcpRequest("tools/call", {
+      name: "edit",
+      arguments: {
+        owner_id: USER,
+        session_id: SESSION,
+        path: DUPLICATE_FILE_PATH,
+        edits: [{ oldText: "same", newText: "changed" }],
+      },
+    });
+    if (!resp.result?.isError || !String(resp.result?.content?.[0]?.text).includes("Matching locations")) {
+      throw new Error("Duplicate match was not rejected");
+    }
   });
 
   // Summary

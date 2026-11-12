@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -21,6 +22,9 @@ type ServerConfig struct {
 
 	// ShellTimeout 非交互式命令执行（HTTP exec / MCP exec）的默认超时
 	ShellTimeout time.Duration `envconfig:"SHELL_TIMEOUT" default:"30s" desc:"Default timeout for shell command execution (HTTP/MCP exec)"`
+
+	// EditTimeout MCP edit 工具的单次调用超时
+	EditTimeout time.Duration `envconfig:"EDIT_TIMEOUT" default:"30s" desc:"Timeout for MCP edit tool calls"`
 }
 
 type SandboxConfig struct {
@@ -56,6 +60,9 @@ func Load() (*Config, error) {
 	// 从环境变量加载
 	if err := envconfig.Process("strata", cfg); err != nil {
 		return nil, err
+	}
+	if cfg.Server.EditTimeout <= 0 {
+		return nil, fmt.Errorf("STRATA_SERVER_EDIT_TIMEOUT must be positive")
 	}
 
 	return cfg, nil
