@@ -82,6 +82,18 @@ wscat -c 'ws://localhost:2280/api/ws/alice/task-001/shell'
 
 MCP available at `http://localhost:2280/mcp/`
 
+The endpoint serves the stateless
+[MCP 2026-07-28 Streamable HTTP transport](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http).
+Modern requests carry protocol metadata and method headers on every request; no
+`initialize` handshake or MCP transport session is required. The same endpoint
+continues to support legacy initialize-based clients through protocol version
+`2025-11-25`.
+
+Strata sandbox state remains explicit across requests through `owner_id` and
+`session_id` arguments or the `X-Owner-Id` and `X-Session-Id` headers.
+`X-Session-Id` identifies a Strata sandbox session; it is unrelated to the
+removed `Mcp-Session-Id` transport header.
+
 | Tool | Description |
 |------|-------------|
 | `exec` | Run a command in the session shell |
@@ -93,6 +105,14 @@ File tools accept relative paths from the session workspace or absolute paths un
 `/root`. They reject paths outside the workspace, binary or non-UTF-8 content, and
 files larger than 4 MiB. `write` requires the parent directory to exist. See
 [MCP file tools](./docs/edit-tool.md) for argument shapes and edit matching rules.
+
+Run the live endpoint smoke test in modern mode, or set `STRATA_MCP_LEGACY=1`
+to exercise the initialize/session compatibility path:
+
+```bash
+npx tsx scripts/test-mcp.ts
+STRATA_MCP_LEGACY=1 npx tsx scripts/test-mcp.ts
+```
 
 For AI agents:
 ```bash

@@ -1,5 +1,5 @@
 .SILENT:
-.PHONY: help gen-rpc clean dist build vet lint package-linux package-linux-arm64
+.PHONY: help gen-rpc clean dist build test vet lint package-linux package-linux-arm64
 
 NAME:=strata
 ROOF:=github.com/liut/strata
@@ -7,6 +7,7 @@ DATE:=$(shell date '+%Y%m%d')
 TAG:=$(shell git describe --tags --always 2>/dev/null || echo "dev")
 GO:=$(shell which go)
 GOMOD:=$(shell echo "$${GO111MODULE:-auto}")
+TEST_PACKAGES:=./pkg/config ./pkg/identity ./pkg/mcp ./pkg/sandbox ./pkg/webapi
 
 # VERSION can be overridden: make dist VERSION=v1.2.3
 VERSION?=$(DATE)-$(TAG)
@@ -20,6 +21,7 @@ help:
 	@echo "  make dist VERSION=xxx - Build with custom version"
 	@echo "  make dist/linux_arm64/strata - Build Linux arm64"
 	@echo "  make build        - Build for local platform"
+	@echo "  make test         - Run unit and package tests"
 	@echo "  make clean        - Clean build artifacts"
 
 PROTO_DIR:=pkg/proto/sandbox
@@ -28,6 +30,10 @@ gen-rpc:
 	cd $(PROTO_DIR) && protoc --go_out=. --go_opt=paths=source_relative \
 		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
 		sandbox.proto
+
+test:
+	echo "Testing $(TEST_PACKAGES) , with GOMOD=$(GOMOD)"
+	GO111MODULE=$(GOMOD) $(GO) test $(TEST_PACKAGES)
 
 vet:
 	echo "Checking ./... , with GOMOD=$(GOMOD)"

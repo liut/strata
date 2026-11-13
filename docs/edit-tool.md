@@ -29,8 +29,11 @@ strata 的 MCP 接口提供 `exec`、`read`、`write`、`edit` 四个工具。�
 - `read` 返回原始可复用文本，不插入行号；`write` 与 `edit` 通过同目录临时文件、`fsync`
   和原子 rename 落盘。
 - 同一会话内，针对同一规范路径的 `write` 和 `edit` 共用路径锁；不同路径可并行。
-- MCP 身份仍使用 `owner_id` / `session_id` 参数或请求头，并通过 `manager.GetOrCreate`
-  自动创建会话。
+- MCP 传输默认使用 `2026-07-28` 无状态协议；每个请求携带协议元数据，不依赖 initialize
+  或 MCP transport session。legacy initialize 客户端仍通过 `2025-11-25` 兼容路径访问同一端点。
+- MCP 身份仍使用 `owner_id` / `session_id` 参数或 `X-Owner-Id` / `X-Session-Id` 请求头，
+  并通过 `manager.GetOrCreate` 自动创建沙箱会话。`X-Session-Id` 标识 Strata 沙箱会话，
+  与已移除的 `Mcp-Session-Id` transport header 无关。
 
 ### `read`
 
