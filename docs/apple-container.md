@@ -25,6 +25,11 @@ If the service is not running:
 container system start
 ```
 
+macOS 26 and later also gate the host side of published ports behind the
+**Local Network** privacy permission. The `container-runtime-linux` helper that
+ships with Apple `container` needs it, otherwise published ports reset the
+connection. See [Published ports reset the connection](#published-ports-reset-the-connection).
+
 ## Building an arm64 image
 
 Apple silicon runs arm64 containers natively. Build the arm64 binary and image:
@@ -81,8 +86,9 @@ Try the published loopback port:
 curl http://127.0.0.1:2280/api/stats
 ```
 
-With Apple container 1.6.0, the published loopback port may reset the connection.
-The container IP can be used instead:
+If the connection is reset, follow
+[Published ports reset the connection](#published-ports-reset-the-connection).
+The container IP works as a fallback:
 
 ```bash
 container inspect strata
@@ -95,11 +101,93 @@ Run the API checks against that address:
 STRATA_ADDR=<container-ip>:2280 ./scripts/test-api.sh
 ```
 
+Run the MCP checks against that address as well:
+
+```bash
+STRATA_MCP=http://<container-ip>:2280/mcp/ bun run scripts/test-mcp.ts
+```
+
 The API is also reachable from inside the container:
 
 ```bash
 container exec strata curl -sS http://127.0.0.1:2280/api/stats
 ```
+
+## Published ports reset the connection
+
+A published port can accept the TCP connection and then reset it:
+
+```text
+curl http://127.0.0.1:2280/api/stats
+curl: (56) Recv failure: Connection reset by peer
+```
+
+This is not a Strata problem. Every published port of every container is
+affected, and the container itself stays healthy:
+
+```bash
+container exec strata curl -sS http://127.0.0.1:2280/api/stats   # works
+curl http://<container-ip>:2280/api/stats                        # works
+```
+
+### Grant Local Network permission
+
+macOS 26 and later gate the host side of published ports behind the **Local
+Network** privacy permission:
+
+1. Open System Settings → Privacy & Security → Local Network
+2. Enable `container-runtime-linux`
+3. Recreate the container, then retry the published port
+
+This is the fix confirmed in the upstream tracker
+([apple/container#919](https://github.com/apple/container/issues/919),
+[#2029](https://github.com/apple/container/issues/2029),
+[#1180](https://github.com/apple/container/issues/1180)).
+
+Verified on macOS 26.7.1 with Apple container 1.6.0: granting the permission and
+recreating the container made every published port work again, with no `container`
+upgrade involved.
+
+### Use the container IP
+
+```bash
+container list                                  # IP is the sixth column
+IP=$(container list | awk '$1=="strata"{print $6}' | cut -d/ -f1)
+curl http://$IP:2280/api/stats
+```
+
+The address changes whenever the container is recreated.
+
+### Upgrade Apple container
+
+Not required for the reset above — the Local Network permission alone fixes it.
+Upgrade when you need other fixes. Apple `container` installs from a signed
+`container-<version>-installer-signed.pkg` and records the receipt
+`com.apple.container-installer`. The same package ships an official updater at
+`/usr/local/bin/update-container.sh`, next to
+`/usr/local/bin/uninstall-container.sh`.
+
+The updater refuses to run while any `com.apple.container*` launchd job is
+registered, so stop the running containers first:
+
+```bash
+container stop strata
+container system stop
+launchctl list | grep 'com\.apple\.container'   # must be empty
+
+sudo /usr/local/bin/update-container.sh           # latest release
+sudo /usr/local/bin/update-container.sh -v 1.7.1  # pinned version
+
+container system start
+```
+
+The updater downloads the signed package from GitHub releases and reinstalls it
+over `/usr/local` with `sudo installer`. Containers do not survive the upgrade:
+recreate `strata` with the original `container run` command.
+
+`container system start` only prompts about the default kernel when no kernel is
+configured for the architecture. Add `--enable-kernel-install` to answer that
+prompt non-interactively in scripts.
 
 ## Verifying isolation
 
@@ -148,3 +236,5 @@ The volume deletion is optional and removes persisted session data.
   `docker/apple-runtime.Dockerfile` with the arm64 build.
 - Apple container is under active development. Pin and verify the installed version
   before relying on it in automation.
+- Published ports depend on the macOS Local Network permission for the
+  `container-runtime-linux` helper. Keep the container IP address as a fallback.

@@ -32,3 +32,18 @@ STRATA_MCP_LEGACY=1 npx tsx scripts/test-mcp.ts
 STRATA_API=http://localhost:2280 npx tsx scripts/strata-mcp.ts
 STRATA_UID=alice npx tsx scripts/strata-mcp.ts
 ```
+
+## Apple Container
+
+Published ports reset the connection unless the `container-runtime-linux` helper
+holds the macOS **Local Network** permission (System Settings → Privacy &
+Security → Local Network). The container IP works either way:
+
+```bash
+IP=$(container list | awk '$1=="strata"{print $6}' | cut -d/ -f1)
+STRATA_ADDR=$IP:2280 ./scripts/test-api.sh
+STRATA_MCP=http://$IP:2280/mcp/ bun run scripts/test-mcp.ts
+```
+
+See [docs/apple-container.md](../docs/apple-container.md) for the permission and
+upgrade steps.
